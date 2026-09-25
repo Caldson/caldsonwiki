@@ -38,12 +38,12 @@
         brand: 'caldsonwiki',            // 侧栏左上角站名
         meta: 'WIKI',                    // 站名后面的小标签
         pageBadge: '静态站点',            // 顶栏标题右侧的小标签
-        home: 'index.html',              // 首页地址（相对站点根目录）
+        home: 'pages/首页/index.html',   // 首页地址（相对站点根目录）：排最前、用房子图标
         pagesDir: 'pages',               // 一页一文件夹时，页面都放在这个目录下
         searchPlaceholder: '搜索本站页面，Enter 打开第一个结果',
         defaultGroup: '页面',             // 没有 group 的页面归到这一组
         manifest: 'pages.json',          // 可选清单，存在就用（见 README）
-        repo: '',                        // 可选：'owner/name'，自定义域名下想让 GitHub API 生效时填
+        repo: 'caldson/caldsonwiki',     // 'owner/name'：不是 *.github.io 域名时必须填，否则问不到文件列表
         probeLimit: 12,                  // 最多顺带抓取多少个页面的 head JSON
         cacheHours: 6                    // GitHub 文件列表的缓存时长
     };
@@ -156,6 +156,11 @@
 
     function hrefFor(path) {
         return relativeFrom(pagePath().replace(/[^/]*$/, ''), path);
+    }
+
+    // 抓取时要用「站点根」的绝对地址：页面在 pages/xxx/ 里时，裸相对路径会解析到它自己那个目录
+    function siteUrl(path) {
+        return (BASE_URL || '') + encodeURI(path);
     }
 
     // 读取一段 HTML 里声明的页面信息（当前文档、或抓回来的文档都能用）
@@ -336,7 +341,7 @@
 
     function listFromManifest() {
         if (!WIKI.manifest) return Promise.resolve([]);
-        return fetch(WIKI.manifest, { cache: 'no-cache' })
+        return fetch(siteUrl(WIKI.manifest), { cache: 'no-cache' })
             .then(function (res) { return res.ok ? res.json() : null; })
             .then(function (data) {
                 if (!data) return [];
@@ -367,7 +372,7 @@
         if (!todo.length) return Promise.resolve();
 
         return Promise.all(todo.map(function (p) {
-            return fetch(encodeURI(p.path), { cache: 'force-cache' })
+            return fetch(siteUrl(p.path), { cache: 'force-cache' })
                 .then(function (res) { return res.ok ? res.text() : ''; })
                 .then(function (html) {
                     if (!html) return;
@@ -403,6 +408,20 @@
                 render();
             });
         });
+    }
+
+    // 一个页面都没发现时，把原因和解法直接说出来（这个提示本身就是排错指南）
+    function discoveryHint() {
+        if (location.protocol === 'file:') {
+            return '本地以 file:// 打开时浏览器不允许读目录，所以只能看到访问过的页面：' +
+                '换个方式打开（例如 python -m http.server），或者部署到 GitHub Pages。';
+        }
+        if (!WIKI.repo && !/^[^.]+\.github\.io$/i.test(location.hostname)) {
+            return '当前域名不是 *.github.io，推不出仓库，所以只发现了本页：' +
+                '请在 dsh-ui.js 里把 WIKI.repo 填成 "owner/name"，或在仓库里放一个 pages.json。';
+        }
+        return '暂时只发现了本页：如果刚推送过，等 GitHub Pages 部署完刷新试试；' +
+            '也可以在仓库里放一个 pages.json 明确列出页面。';
     }
 
     /* ------------------------------ 样式 ------------------------------ */
@@ -640,7 +659,7 @@
             ]),
             el('div', { class: 'dsh-side-head-actions' }, [
                 iconBtn('dsh-icon-btn', 'collapse', '收起侧栏', ICONS.panel),
-                el('a', { class: 'dsh-icon-btn', href: WIKI.home, title: '回到首页', 'aria-label': '回到首页', html: ICONS.home })
+                el('a', { class: 'dsh-icon-btn', href: hrefFor(WIKI.home), title: '回到首页', 'aria-label': '回到首页', html: ICONS.home })
             ])
         ]);
 
@@ -853,10 +872,7 @@
         holder.appendChild(cards);
 
         if (pages.length <= 1) {
-            holder.appendChild(el('p', {
-                class: 'dsh-rail-hint',
-                text: '暂时只发现了本页：部署到 GitHub Pages 后会自动列出仓库里的全部 .html；本地打开时，每访问一个页面就登记一个。'
-            }));
+            holder.appendChild(el('p', { class: 'dsh-rail-hint', text: discoveryHint() }));
         }
     }
 

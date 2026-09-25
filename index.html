@@ -3,46 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>首页 - 咖咯德苏林的维基</title>
+    <title>站点入口 - 咖咯德苏林的维基</title>
     <script type="application/json" id="page-meta">
     {
-        "name": "首页",
-        "descript": "站点介绍、页面索引与新增页面的方法"
+        "name": "站点入口",
+        "descript": "域名根目录的入口页，通向维基首页与公告"
     }
     </script>
 </head>
 <body>
     <h1>咖咯德苏林的维基</h1>
 
-    <p>这里放站点自己的笔记与公告。左边的列表是全部页面，下面的卡片是同一份索引，点「打开」就能读。</p>
+    <p>这是域名根目录的入口页。内容目录在「首页」里，左边侧栏是全部页面，也可以按 <code>/</code> 直接搜。</p>
 
-    <h2 id="页面索引">页面索引</h2>
-    <p>下面的卡片由 <code>dsh-ui.js</code> 自动发现并生成，加页面不用手动改这里。</p>
-    <div data-wiki-index></div>
-
-    <h2 id="怎么新增页面">怎么新增页面</h2>
-    <p>页面放在 <code>pages/&lt;名称&gt;/index.html</code>，一个页面一个文件夹：</p>
-    <ol>
-        <li>新建文件夹 <code>pages/页面名/</code>，在里面建 <code>index.html</code>，只写正文（标题用 <code>&lt;h1&gt;</code>，小节用 <code>&lt;h2&gt;</code>／<code>&lt;h3&gt;</code>，右侧目录自动生成）。</li>
-        <li>在 <code>&lt;head&gt;</code> 里声明这一页：<code>{ "name": "页面名", "descript": "一句话简介" }</code>，<code>name</code> 省略时用文件夹名。</li>
-        <li>在 <code>&lt;/body&gt;</code> 前保留一行 <code>&lt;script src="../../dsh-ui.js"&gt;&lt;/script&gt;</code>（比根目录多两级 <code>../</code>）。</li>
-    </ol>
-    <p>根目录下的 <code>*.html</code> 同样会被收进来，两种结构可以混用。除此之外没有清单要维护：侧栏列表、这份索引和站内搜索都来自自动发现。</p>
-
-    <h2 id="页面是怎么发现的">页面是怎么发现的</h2>
-    <p>静态站点没法列出自己的目录，所以 <code>dsh-ui.js</code> 分三层自动发现，谁先给出结果就用谁：</p>
+    <h2 id="去哪儿">去哪儿</h2>
     <ul>
-        <li>部署在 GitHub Pages 上时，直接问 GitHub API 要仓库根目录下的 <code>.html</code> 列表，第一次打开就是全的。</li>
-        <li>如果仓库里放了可选的 <code>pages.json</code> 清单，就优先读它（格式见 README）。</li>
-        <li>其它情况（例如本地双击打开）用 localStorage 自注册：每访问一个页面就登记一个，列表会越用越全。</li>
+        <li><a href="pages/首页/index.html">首页</a> —— 站点介绍与全部页面索引</li>
+        <li><a href="pages/公告/index.html">公告</a> —— 站点变动记录</li>
+        <li><a href="about.html">关于本站</a> —— 站点结构与维护方式</li>
     </ul>
 
-    <h2 id="快捷键">快捷键</h2>
-    <ul>
-        <li><code>/</code> 或 <code>Ctrl</code>+<code>K</code>：聚焦底部搜索框</li>
-        <li><code>↑</code> <code>↓</code>：在搜索结果里移动，<code>Enter</code> 打开</li>
-        <li><code>Esc</code>：收起搜索结果，或关掉手机上的侧栏</li>
-    </ul>
+    <h2 id="为什么有这一页">为什么有这一页</h2>
+    <p>GitHub Pages 会把域名根目录的 <code>index.html</code> 当作默认首页，所以它留在这里当入口；真正的维基首页放在 <code>pages/首页/</code>，两者分工不重复。</p>
 
     <script src="dsh-ui.js"></script>
 </body>

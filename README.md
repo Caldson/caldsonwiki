@@ -11,13 +11,16 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `index.html` | 首页 |
+| `index.html` | 站点入口（域名根目录的默认页） |
+| `pages/首页/index.html` | 维基首页：站点介绍 + 自动生成的页面索引 |
+| `pages/公告/index.html` | 公告目录 |
+| `pages/oldwebsitemovenotification/index.html` | 旧站迁移公告 |
 | `about.html` | 关于本站 |
-| `oldwebsitemovenotification.html` | 旧站迁移公告 |
-| `pages/<名称>/index.html` | 一页一文件夹的页面 |
 | `dsh-ui.js` | 唯一的界面脚本：注入样式、侧栏、目录、站内搜索、页面发现 |
 
 根目录的 `*.html` 和 `pages/<名称>/index.html` 都会被收进侧栏，两种结构可以混用。
+哪一页算「首页」（排最前、用房子图标）由 `WIKI.home` 决定，当前指向 `pages/首页/index.html`；
+根目录的 `index.html` 是 GitHub Pages 要求的默认页，所以留作站点入口。
 
 ## 新增一个页面
 
@@ -65,7 +68,7 @@
 
    ```json
    [
-     { "path": "index.html", "name": "首页", "descript": "站点介绍" },
+     { "path": "pages/首页/index.html", "name": "首页", "descript": "站点介绍" },
      { "path": "pages/公告/index.html", "name": "公告" },
      "pages/关于/index.html"
    ]
@@ -83,7 +86,7 @@
 
 | 项 | 说明 |
 | --- | --- |
-| `home` | 哪一个页面算首页（排最前、用房子图标）。默认 `index.html`；如果首页是文件夹版，改成 `pages/首页/index.html` |
+| `home` | 哪一个页面算首页（排最前、用房子图标），默认 `pages/首页/index.html` |
 | `pagesDir` | 一页一文件夹时的目录名，默认 `pages` |
 | `defaultGroup` | 页面没写 `group` 时归到哪一栏，默认「页面」 |
 | `repo` | `'owner/name'`，自定义域名下让 GitHub API 生效 |
