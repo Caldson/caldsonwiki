@@ -1,0 +1,148 @@
+/*!
+ * tiles.css —— [data-wiki-index] 里的页面磁贴
+ *
+ * 这个文件由 dsh-ui.js 在每个页面自动 <link> 进来，页面里不用手写。
+ * 颜色用的是 dsh-ui.js 注入的 CSS 变量（--dsh-bg / --dsh-line / --dsh-accent …），
+ * 所以浅色/深色主题会跟着切换。想改磁贴的样子，只改这个文件即可。
+ */
+
+/* 网格容器：列宽自适应，窗口变窄自动变成 1~2 列 */
+.dsh-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 16px 0 4px;
+}
+
+/* 单个磁贴：整块都能点 */
+.dsh-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 108px;
+    padding: 14px;
+    border: 1px solid var(--dsh-line);
+    border-radius: 14px;
+    background: var(--dsh-bg);
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.dsh-tile:hover,
+.dsh-tile:focus-visible {
+    transform: translateY(-2px);
+    border-color: var(--dsh-accent);
+    box-shadow: var(--dsh-shadow);
+    outline: none;
+}
+
+/* 左上角：图标 + 页面所在的文件夹名 */
+.dsh-tile-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.dsh-tile-folder {
+    min-width: 0;
+    font-size: 11px;
+    color: var(--dsh-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 左上角图标 */
+.dsh-tile-icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: var(--dsh-hover);
+    color: var(--dsh-fg-soft);
+    transition: background .15s ease, color .15s ease;
+}
+.dsh-tile:hover .dsh-tile-icon {
+    background: var(--dsh-accent-soft);
+    color: var(--dsh-accent);
+}
+/* 首页那块用实心底色，一眼能认出来 */
+.dsh-tile[data-home="1"] .dsh-tile-icon {
+    background: var(--dsh-accent);
+    color: #fff;
+}
+
+/* 页面名 */
+.dsh-tile-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dsh-fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 简介：最多两行，超出省略 */
+.dsh-tile-desc {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--dsh-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;              /* 标准属性，和上面的 -webkit- 写法并存 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 左下角的“打开” */
+.dsh-tile-go {
+    margin-top: auto;
+    font-size: 12px;
+    color: var(--dsh-muted);
+    transition: color .15s ease;
+}
+.dsh-tile:hover .dsh-tile-go {
+    color: var(--dsh-accent);
+}
+
+/* 不属于默认分组时，右上角标出分组名 */
+.dsh-tile-group {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    padding: 0 7px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--dsh-muted);
+    border: 1px solid var(--dsh-line);
+    border-radius: 999px;
+}
+
+/* 窄屏：格子小一点，手机上更好点 */
+@media (max-width: 600px) {
+    .dsh-tiles {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
+    }
+    .dsh-tile {
+        min-height: 96px;
+        padding: 12px;
+    }
+    .dsh-tile-group {
+        display: none;
+    }
+}
+
+/* 打印：去掉悬停位移，别把磁贴劈成两页 */
+@media print {
+    .dsh-tile {
+        break-inside: avoid;
+        box-shadow: none;
+        transform: none;
+    }
+}

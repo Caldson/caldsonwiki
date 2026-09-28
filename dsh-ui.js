@@ -1,5 +1,5 @@
 /*!
- * dsh-ui.js —— 咖咯德苏林维基的统一界面
+ * dsh-ui.js —— 小咖维基的统一界面
  * 布局参考 DeepSeek Harness Web GUI：左侧深色导航栏 / 中间正文 / 右侧目录栏 / 底部输入条。
  *
  * 用法：
@@ -35,16 +35,18 @@
 
     /* ============================== 配置 ============================== */
     var WIKI = {
-        brand: 'caldsonwiki',            // 侧栏左上角站名
+        brand: '小咖的维基',            // 侧栏左上角站名
         meta: 'WIKI',                    // 站名后面的小标签
         pageBadge: '静态站点',            // 顶栏标题右侧的小标签
         home: 'pages/首页/index.html',   // 首页地址（相对站点根目录）：排最前、用房子图标
         pagesDir: 'pages',               // 一页一文件夹时，页面都放在这个目录下
-        searchPlaceholder: '搜索本站页面，Enter 打开第一个结果',
+        searchPlaceholder: '搜索页面或编号，Enter 打开第一个结果',
         defaultGroup: '页面',             // 没有 group 的页面归到这一组
         manifest: 'pages.json',          // 可选清单，存在就用（见 README）
         repo: 'caldson/caldsonwiki',     // 'owner/name'：不是 *.github.io 域名时必须填，否则问不到文件列表
+        ignore: ['index.html'],          // 不列进侧栏的文件（根目录的入口跳转页）
         probeLimit: 12,                  // 最多顺带抓取多少个页面的 head JSON
+        walkDepth: 3,                    // 列目录时最多往下钻几层（配合 GitHub API 的调用次数）
         cacheHours: 6                    // GitHub 文件列表的缓存时长
     };
     /* ================================================================= */
@@ -120,6 +122,26 @@
         return String(path || '').toLowerCase() === pagePath().toLowerCase();
     }
 
+    function isHome(path) {
+        return String(path || '').toLowerCase() === String(WIKI.home || '').toLowerCase();
+    }
+
+    // WIKI.ignore 里列的文件不算页面（按路径比，和 localStorage 里有没有旧记录无关）
+    function isIgnored(path) {
+        var p = String(path || '').toLowerCase();
+        return (WIKI.ignore || []).some(function (x) { return String(x).toLowerCase() === p; });
+    }
+
+    // 页面所在的文件夹名（去掉 pagesDir 前缀）；直接放在站点根目录的页面返回空串
+    // pages/公告/index.html → 「公告」；about.html → 「」
+    function folderOf(path) {
+        var segs = String(path || '').split('/').filter(Boolean);
+        if (segs.length < 2) return '';
+        segs.pop();                                                  // 去掉文件名
+        if (WIKI.pagesDir && segs[0] === WIKI.pagesDir) segs.shift(); // 去掉内容根目录那层
+        return segs.join('/');
+    }
+
     function stripExt(file) {
         return String(file || '').replace(/\.html?$/i, '');
     }
@@ -165,7 +187,7 @@
 
     // 读取一段 HTML 里声明的页面信息（当前文档、或抓回来的文档都能用）
     function readMetaFrom(doc) {
-        var out = { name: '', descript: '', group: '' };
+        var out = { name: '', descript: '', group: '', pageno: 0 };
         var one = doc.getElementById('page-meta') || doc.getElementById('dsh-page-meta');
         var nodes = one ? [one] : doc.querySelectorAll('head script[type="application/json"]');
         for (var i = 0; i < nodes.length; i++) {
@@ -174,9 +196,12 @@
             if (!data || typeof data !== 'object') continue;
             var name = typeof data.name === 'string' ? data.name.trim() : '';
             var descript = String(data.descript || data.description || data.desc || '').trim();
-            if (!name && !descript) continue;          // 不是页面信息，跳过
+            var pageno = parseInt(data.pageno, 10);
+            if (!isFinite(pageno) || pageno < 1) pageno = 0;   // 编号从 1 开始；没写或写错就是 0（不显示）
+            if (!name && !descript && !pageno) continue;       // 不是页面信息，跳过
             out.name = name;
             out.descript = descript;
+            out.pageno = pageno;
             out.group = typeof data.group === 'string' ? data.group.trim() : '';
             break;
         }
@@ -187,7 +212,7 @@
     function selfEntry() {
         var path = pagePath();
         var m = readMetaFrom(document);
-        return { path: path, name: m.name || fallbackName(path), descript: m.descript, group: m.group };
+        return { path: path, name: m.name || fallbackName(path), descript: m.descript, group: m.group, pageno: m.pageno };
     }
 
     /* ---------------- localStorage 自注册 ---------------- */
@@ -210,7 +235,7 @@
         var reg = loadRegistry();
         return Object.keys(reg).map(function (path) {
             var it = reg[path] || {};
-            return { path: path, name: it.name || '', descript: it.descript || '', group: it.group || '' };
+            return { path: path, name: it.name || '', descript: it.descript || '', group: it.group || '', pageno: it.pageno || 0 };
         });
     }
 
@@ -221,8 +246,9 @@
         list.forEach(function (p) {
             if (!p || !p.path) return;
             var old = reg[p.path];
-            if (!old || old.name !== p.name || old.descript !== p.descript || old.group !== p.group) {
-                reg[p.path] = { name: p.name || '', descript: p.descript || '', group: p.group || '' };
+            if (!old || old.name !== p.name || old.descript !== p.descript || old.group !== p.group ||
+                (old.pageno || 0) !== (p.pageno || 0)) {
+                reg[p.path] = { name: p.name || '', descript: p.descript || '', group: p.group || '', pageno: p.pageno || 0 };
                 changed = true;
             }
         });
@@ -238,14 +264,16 @@
                 if (!e) return;
                 var path = normalizePath(e.path || e.file || e.href);
                 if (!path || !/\.html?$/i.test(path)) return;
+                if (isIgnored(path)) return;                             // 入口跳转页之类：不算页面
                 if (/(^|\/)[._]/.test(path)) return;                     // 跳过 . / _ 开头的临时文件与目录
                 if (/(^|\/)404\.html?$/i.test(path)) return;
                 var key = path.toLowerCase();
-                if (!byKey[key]) { byKey[key] = { path: path, name: '', descript: '', group: '' }; order.push(key); }
+                if (!byKey[key]) { byKey[key] = { path: path, name: '', descript: '', group: '', pageno: 0 }; order.push(key); }
                 var t = byKey[key];
                 if (e.name) t.name = e.name;
                 if (e.descript) t.descript = e.descript;
                 if (e.group) t.group = e.group;
+                if (e.pageno) t.pageno = e.pageno;
             });
         });
         var list = order.map(function (k) {
@@ -253,10 +281,9 @@
             if (!p.name) p.name = fallbackName(p.path);   // 没写 name：文件夹页面用文件夹名，其余用文件名
             return p;
         });
-        var home = String(WIKI.home || '').toLowerCase();
         list.sort(function (a, b) {
-            var ah = a.path.toLowerCase() === home ? 0 : 1;
-            var bh = b.path.toLowerCase() === home ? 0 : 1;
+            var ah = isHome(a.path) ? 0 : 1;
+            var bh = isHome(b.path) ? 0 : 1;
             if (ah !== bh) return ah - bh;                // 首页永远排最前
             return a.name.localeCompare(b.name, 'zh');
         });
@@ -287,12 +314,29 @@
             .catch(function () { return null; });          // 断网 / 限流都当没有
     }
 
-    function htmlEntries(arr, dir) {
-        if (!Array.isArray(arr)) return [];
-        return arr.filter(function (it) {
-            return it && it.type === 'file' && /\.html?$/i.test(it.name || '') &&
-                !/^[._]/.test(it.name) && !/^404\.html?$/i.test(it.name);
-        }).map(function (it) { return { path: joinPath(dir, it.name) }; });
+    // 递归列目录：站点根目录下的 *.html，加上 pagesDir 里任意层级的 *.html
+    // 根目录只下潜进 pagesDir，免得把 .git / assets 之类全翻一遍
+    function walkDir(repo, dir, base, depth) {
+        return apiContents(repo, dir).then(function (arr) {
+            if (!Array.isArray(arr)) return [];
+            var files = [], dirs = [];
+            arr.forEach(function (it) {
+                if (!it || !it.name || /^[._]/.test(it.name)) return;
+                if (it.type === 'file') {
+                    if (/\.html?$/i.test(it.name) && !/^404\.html?$/i.test(it.name)) {
+                        files.push({ path: joinPath(dir, it.name) });      // 名字随便，index 与否都收
+                    }
+                } else if (it.type === 'dir' && depth < WIKI.walkDepth) {
+                    if (dir !== base || it.name === WIKI.pagesDir) dirs.push(joinPath(dir, it.name));
+                }
+            });
+            if (!dirs.length) return files;
+            return Promise.all(dirs.map(function (d) { return walkDir(repo, d, base, depth + 1); }))
+                .then(function (nested) {
+                    nested.forEach(function (l) { files = files.concat(l); });
+                    return files;
+                });
+        });
     }
 
     function listFromGitHub() {
@@ -305,35 +349,11 @@
             }
         } catch (e) { /* 缓存坏了就直接请求 */ }
 
-        return apiContents(target.repo, target.dir).then(function (root) {
-            if (!Array.isArray(root)) return [];
-
-            // 1) 根目录下的 *.html
-            var out = htmlEntries(root, target.dir);
-
-            // 2) pages/ 下的子目录：每个目录取它的 index.html，同时收下直接的 .html
-            var subs = root.filter(function (it) {
-                return it && it.type === 'dir' && it.name === WIKI.pagesDir && !/^[._]/.test(it.name);
-            }).map(function (it) { return joinPath(target.dir, it.name); });
-
-            return Promise.all(subs.map(function (dir) {
-                return apiContents(target.repo, dir).then(function (children) {
-                    if (!Array.isArray(children)) return [];
-                    var list = htmlEntries(children, dir);
-                    children.forEach(function (it) {
-                        if (it && it.type === 'dir' && it.name && !/^[._]/.test(it.name)) {
-                            list.push({ path: joinPath(joinPath(dir, it.name), 'index.html') });
-                        }
-                    });
-                    return list;
-                });
-            })).then(function (nested) {
-                nested.forEach(function (l) { out = out.concat(l); });
-                try {
-                    localStorage.setItem(GH_KEY, JSON.stringify({ repo: target.repo, dir: target.dir, ts: Date.now(), files: out }));
-                } catch (e) { /* 忽略 */ }
-                return out;
-            });
+        return walkDir(target.repo, target.dir, target.dir, 0).then(function (files) {
+            try {
+                localStorage.setItem(GH_KEY, JSON.stringify({ repo: target.repo, dir: target.dir, ts: Date.now(), files: files }));
+            } catch (e) { /* 忽略 */ }
+            return files;
         });
     }
 
@@ -380,6 +400,7 @@
                     if (m.name) p.name = m.name;
                     if (m.descript) p.descript = m.descript;
                     if (m.group) p.group = m.group;
+                    if (m.pageno) p.pageno = m.pageno;
                 })
                 .catch(function () { /* file:// 下 fetch 会被拦，忽略即可 */ });
         }));
@@ -497,6 +518,8 @@
             '.dsh-nav-item.is-active .dsh-nav-icon{color:#fff;}',
             '.dsh-nav-label{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}',
             '.dsh-nav-note{flex:none; font-size:11px; color:var(--dsh-side-muted);}',
+            '.dsh-nav-folder{flex:none; max-width:52%; font-size:11px; color:var(--dsh-side-muted);',
+            '  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}',
             '.dsh-nav-sub{padding-left:24px;}',
             '.dsh-side-foot{flex:none; border-top:1px solid var(--dsh-side-line); padding:6px 8px;}',
             '.dsh-foot-item{display:flex; align-items:center; gap:8px; width:100%; padding:6px 8px; border:0; border-radius:8px;',
@@ -546,20 +569,14 @@
             '  border:1px solid var(--dsh-line-strong); border-radius:9px; background:var(--dsh-bg); color:var(--dsh-fg);}',
             '.dsh-article button:hover{border-color:var(--dsh-accent); color:var(--dsh-accent);}',
 
-            /* ---------- 索引卡片（对应截图里的文件卡片） ---------- */
-            '.dsh-cards{display:flex; flex-direction:column; gap:10px; margin:14px 0;}',
-            '.dsh-card{display:flex; align-items:center; gap:12px; padding:11px 13px; text-decoration:none; color:inherit;',
-            '  border:1px solid var(--dsh-line); border-radius:12px; background:var(--dsh-bg);',
-            '  transition:border-color .15s ease, box-shadow .15s ease;}',
-            '.dsh-card:hover{border-color:var(--dsh-line-strong); box-shadow:var(--dsh-shadow);}',
-            '.dsh-card-icon{flex:none; width:32px; height:32px; border-radius:9px; background:var(--dsh-hover);',
-            '  display:grid; place-items:center; color:var(--dsh-fg-soft);}',
-            '.dsh-card-body{flex:1; min-width:0;}',
-            '.dsh-card-title{display:block; font-size:14px; font-weight:600; color:var(--dsh-fg);}',
-            '.dsh-card-desc{display:block; font-size:12.5px; color:var(--dsh-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}',
-            '.dsh-card-open{flex:none; font-size:12.5px; padding:3px 12px; border-radius:8px;',
-            '  border:1px solid var(--dsh-line-strong); color:var(--dsh-fg-soft);}',
-            '.dsh-card:hover .dsh-card-open{border-color:var(--dsh-accent); color:var(--dsh-accent);}',
+            /* ---------- 搜索结果的文字（磁贴样式全部在 tiles.css 里） ---------- */
+            '.dsh-result-head{display:flex; align-items:center; gap:6px; min-width:0;}',
+            '.dsh-result-no{flex:none; min-width:18px; height:18px; padding:0 5px; border-radius:6px;',
+            '  display:inline-flex; align-items:center; justify-content:center;',
+            '  background:var(--dsh-accent-soft); color:var(--dsh-accent); font-size:11px; font-weight:600;',
+            '  font-variant-numeric:tabular-nums;}',
+            '.dsh-result-title{display:block; min-width:0; font-size:14px; font-weight:600; color:var(--dsh-fg);',
+            '  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}',
 
             /* ---------- 底部输入条 ---------- */
             '.dsh-composer-wrap{position:relative; flex:none; padding:6px 24px 14px;}',
@@ -586,7 +603,8 @@
             '.dsh-result:hover,.dsh-result.is-sel{background:var(--dsh-hover);}',
             '.dsh-result-body{flex:1; min-width:0;}',
             '.dsh-result-desc{display:block; font-size:12px; color:var(--dsh-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}',
-            '.dsh-result-sec{flex:none; font-size:11.5px; color:var(--dsh-muted);}',
+            '.dsh-result-sec{flex:none; max-width:40%; font-size:11.5px; color:var(--dsh-muted);',
+            '  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}',
             '.dsh-empty{padding:10px; font-size:13px; color:var(--dsh-muted);}',
 
             /* ---------- 右侧目录栏 ---------- */
@@ -644,6 +662,16 @@
         document.head.appendChild(el('style', { id: 'dsh-ui-style', text: css }));
     }
 
+    // 磁贴样式单独一个文件，放在 dsh-ui.js 旁边，由这里 <link> 进来（子目录页面也能找对）
+    function injectTilesStylesheet() {
+        if (document.getElementById('dsh-tiles-css')) return;
+        document.head.appendChild(el('link', {
+            id: 'dsh-tiles-css',
+            rel: 'stylesheet',
+            href: (BASE_URL || '') + 'tiles.css'
+        }));
+    }
+
     /* ------------------------------ 界面构建 ------------------------------ */
 
     var refs = {};
@@ -688,14 +716,16 @@
     }
 
     function navItem(p) {
-        var isHome = p.path.toLowerCase() === String(WIKI.home || '').toLowerCase();
+        var homePage = isHome(p.path);
+        var folder = folderOf(p.path);
         var a = el('a', {
             class: 'dsh-nav-item',
             href: hrefFor(p.path),
             title: p.descript ? p.name + ' —— ' + p.descript : p.name
         }, [
-            el('span', { class: 'dsh-nav-icon', html: isHome ? ICONS.home : ICONS.doc }),
-            el('span', { class: 'dsh-nav-label', text: p.name })
+            el('span', { class: 'dsh-nav-icon', html: homePage ? ICONS.home : ICONS.doc }),
+            el('span', { class: 'dsh-nav-label', text: p.name }),
+            folder ? el('span', { class: 'dsh-nav-folder', text: folder }) : null
         ]);
         if (isCurrent(p.path)) {
             a.classList.add('is-active');
@@ -858,18 +888,32 @@
         if (!holder) return;
         holder.textContent = '';
 
-        var cards = el('div', { class: 'dsh-cards' });
+        // 一个页面一块磁贴；样式在 tiles.css
+        var grid = el('div', { class: 'dsh-tiles' });
         pages.forEach(function (p) {
-            cards.appendChild(el('a', { class: 'dsh-card', href: hrefFor(p.path) }, [
-                el('span', { class: 'dsh-card-icon', html: ICONS.doc }),
-                el('span', { class: 'dsh-card-body' }, [
-                    el('span', { class: 'dsh-card-title', text: p.name }),
-                    el('span', { class: 'dsh-card-desc', text: p.descript || p.path })
+            var homePage = isHome(p.path);
+            var folder = folderOf(p.path);
+            var tile = el('a', {
+                class: 'dsh-tile',
+                href: hrefFor(p.path),
+                title: p.descript ? p.name + ' —— ' + p.descript : p.name,
+                dataset: homePage ? { home: '1' } : null
+            }, [
+                el('span', { class: 'dsh-tile-top' }, [
+                    el('span', { class: 'dsh-tile-icon', html: homePage ? ICONS.home : ICONS.doc }),
+                    folder ? el('span', { class: 'dsh-tile-folder', text: folder }) : null
                 ]),
-                el('span', { class: 'dsh-card-open', text: '打开' })
-            ]));
+                el('span', { class: 'dsh-tile-name', text: p.name }),
+                el('span', { class: 'dsh-tile-desc', text: p.descript || p.path }),
+                el('span', { class: 'dsh-tile-go', text: '打开 →' })
+            ]);
+            // 分组和文件夹同名时不重复标（左上角已经写着文件夹了）
+            if (p.group && p.group !== WIKI.defaultGroup && p.group !== folder) {
+                tile.appendChild(el('span', { class: 'dsh-tile-group', text: p.group }));
+            }
+            grid.appendChild(tile);
         });
-        holder.appendChild(cards);
+        holder.appendChild(grid);
 
         if (pages.length <= 1) {
             holder.appendChild(el('p', { class: 'dsh-rail-hint', text: discoveryHint() }));
@@ -985,27 +1029,34 @@
 
         if (!query) { hideResults(); return; }
 
+        // 直接敲编号（pageno）的排最前，其次是标题/路径开头命中的
         var starts = pages.filter(function (p) {
-            return p.name.toLowerCase().indexOf(query) === 0 || p.path.toLowerCase().indexOf(query) === 0;
+            return String(p.pageno || '') === query ||
+                p.name.toLowerCase().indexOf(query) === 0 ||
+                p.path.toLowerCase().indexOf(query) === 0;
         });
         var rest = pages.filter(function (p) {
             if (starts.indexOf(p) !== -1) return false;
-            return (p.name + ' ' + p.descript + ' ' + p.path + ' ' + (p.group || '')).toLowerCase().indexOf(query) !== -1;
+            return (p.name + ' ' + p.descript + ' ' + p.path + ' ' + (p.group || '') + ' ' + (p.pageno || ''))
+                .toLowerCase().indexOf(query) !== -1;
         });
         search.list = starts.concat(rest).slice(0, 8);
 
         refs.results.textContent = '';
         if (!search.list.length) {
-            refs.results.appendChild(el('div', { class: 'dsh-empty', text: '没有匹配的页面。' }));
+            refs.results.appendChild(el('div', { class: 'dsh-empty', text: '没有匹配的页面。试试标题、简介，或直接输入编号。' }));
         } else {
             search.list.forEach(function (p, i) {
                 var a = el('a', { class: 'dsh-result', href: hrefFor(p.path), role: 'option' }, [
                     el('span', { class: 'dsh-nav-icon', html: ICONS.doc }),
                     el('span', { class: 'dsh-result-body' }, [
-                        el('span', { class: 'dsh-card-title', text: p.name }),
+                        el('span', { class: 'dsh-result-head' }, [
+                            p.pageno ? el('span', { class: 'dsh-result-no', text: String(p.pageno) }) : null,
+                            el('span', { class: 'dsh-result-title', text: p.name })
+                        ]),
                         el('span', { class: 'dsh-result-desc', text: p.descript || p.path })
                     ]),
-                    el('span', { class: 'dsh-result-sec', text: p.group || WIKI.defaultGroup })
+                    el('span', { class: 'dsh-result-sec', text: folderOf(p.path) || p.group || WIKI.defaultGroup })
                 ]);
                 a.addEventListener('mouseenter', function () { selectResult(i); });
                 search.nodes.push(a);
@@ -1061,6 +1112,7 @@
         if (document.getElementById('dsh-app')) return;
 
         injectStyles();
+        injectTilesStylesheet();
 
         var pageNodes = takePageNodes();
         var h1 = null;

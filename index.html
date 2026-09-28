@@ -3,29 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>站点入口 - 咖咯德苏林的维基</title>
-    <script type="application/json" id="page-meta">
-    {
-        "name": "站点入口",
-        "descript": "域名根目录的入口页，通向维基首页与公告"
-    }
-    </script>
+    <title>小咖的维基</title>
+
+    <!--
+        域名根目录只是入口：立刻跳到维基首页。
+        GitHub Pages 要求根目录必须有 index.html，所以这一页留着当跳转页，本身不算一个页面。
+        它不在侧栏里出现（见 dsh-ui.js 的 WIKI.ignore）。
+    -->
+    <link rel="canonical" href="pages/首页/index.html">
+    <meta http-equiv="refresh" content="0; url=pages/首页/index.html">
+    <script>location.replace('pages/首页/index.html');</script>
 </head>
 <body>
-    <h1>咖咯德苏林的维基</h1>
-
-    <p>这是域名根目录的入口页。内容目录在「首页」里，左边侧栏是全部页面，也可以按 <code>/</code> 直接搜。</p>
-
-    <h2 id="去哪儿">去哪儿</h2>
-    <ul>
-        <li><a href="pages/首页/index.html">首页</a> —— 站点介绍与全部页面索引</li>
-        <li><a href="pages/公告/index.html">公告</a> —— 站点变动记录</li>
-        <li><a href="about.html">关于本站</a> —— 站点结构与维护方式</li>
-    </ul>
-
-    <h2 id="为什么有这一页">为什么有这一页</h2>
-    <p>GitHub Pages 会把域名根目录的 <code>index.html</code> 当作默认首页，所以它留在这里当入口；真正的维基首页放在 <code>pages/首页/</code>，两者分工不重复。</p>
-
-    <script src="dsh-ui.js"></script>
+    <p>正在前往<a href="pages/首页/index.html">首页</a>……</p>
 </body>
 </html>
