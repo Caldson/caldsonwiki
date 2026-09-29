@@ -639,7 +639,14 @@
 
             /* ---------- 遮罩与响应式 ---------- */
             '.dsh-scrim{display:none; position:fixed; top:0; right:0; bottom:0; left:0; z-index:55; background:rgba(0,0,0,.45);}',
-            '@media (max-width:1180px){ .dsh-rail{display:none;} }',
+            /* 右边栏留到 1025px 才收起：平板横屏（约 1130px）也能看到，这时把栏宽和正文内边距收一点 */
+            '@media (max-width:1024px){ .dsh-rail{display:none;} }',
+            '@media (min-width:1025px) and (max-width:1240px){',
+            '  .dsh-rail{width:220px;}',
+            '  .dsh-article{padding:20px 24px 36px;}',
+            '  .dsh-composer-wrap{padding:6px 16px 12px;}',
+            '  .dsh-results{left:16px; right:16px;}',
+            '}',
             '@media (max-width:900px){',
             '  .dsh-side{position:fixed; top:0; bottom:0; left:0; z-index:60; transform:translateX(-100%);',
             '    transition:transform .2s ease;}',
