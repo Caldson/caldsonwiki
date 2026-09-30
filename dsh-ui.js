@@ -65,6 +65,7 @@
 
     var ICONS = {
         panel: svg('<rect x="2" y="3.2" width="12" height="9.6" rx="1.8"/><path d="M6.4 3.2v9.6"/>'),
+        panelRight: svg('<rect x="2" y="3.2" width="12" height="9.6" rx="1.8"/><path d="M9.6 3.2v9.6"/>'),
         home: svg('<path d="M3 7.3 8 3.2l5 4.1v5.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/>'),
         folder: svg('<path d="M2.2 4.6A1.6 1.6 0 0 1 3.8 3h2l1.2 1.6h5.2a1.6 1.6 0 0 1 1.6 1.6v5A1.6 1.6 0 0 1 12.2 13H3.8a1.6 1.6 0 0 1-1.6-1.6Z"/>'),
         doc: svg('<path d="M9.3 2.6H5a1 1 0 0 0-1 1v8.8a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V5.3Z"/><path d="M9.3 2.6v2.7H12"/>'),
@@ -539,6 +540,7 @@
             '.dsh-icon-btn-main:hover{background:var(--dsh-hover); color:var(--dsh-fg);}',
             '.dsh-menu-btn{display:none;}',
             '.dsh-app.is-side-collapsed .dsh-menu-btn{display:inline-flex;}',
+            '.dsh-rail-btn{display:none; margin-left:auto;}',
             '.dsh-content{flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; scroll-behavior:smooth;}',
             '.dsh-article{max-width:780px; margin:0 auto; padding:22px 32px 40px; overflow-wrap:break-word;}',
             '.dsh-page-meta{margin:0 0 20px; font-size:12px; color:var(--dsh-muted);}',
@@ -639,13 +641,20 @@
 
             /* ---------- 遮罩与响应式 ---------- */
             '.dsh-scrim{display:none; position:fixed; top:0; right:0; bottom:0; left:0; z-index:55; background:rgba(0,0,0,.45);}',
-            /* 右边栏留到 1025px 才收起：平板横屏（约 1130px）也能看到，这时把栏宽和正文内边距收一点 */
-            '@media (max-width:1024px){ .dsh-rail{display:none;} }',
+            /* 右边栏：1025~1240px 把栏宽和正文内边距收一点 */
             '@media (min-width:1025px) and (max-width:1240px){',
             '  .dsh-rail{width:220px;}',
             '  .dsh-article{padding:20px 24px 36px;}',
             '  .dsh-composer-wrap{padding:6px 16px 12px;}',
             '  .dsh-results{left:16px; right:16px;}',
+            '}',
+            /* ≤1024px：右边栏也变成抽屉，从右侧滑出，用顶栏右侧的按钮开关 */
+            '@media (max-width:1024px){',
+            '  .dsh-rail{position:fixed; top:0; right:0; bottom:0; z-index:60; width:280px; max-width:82vw;',
+            '    display:flex; transform:translateX(100%); transition:transform .2s ease;}',
+            '  .dsh-app.is-rail-open .dsh-rail{transform:none; box-shadow:0 0 40px rgba(0,0,0,.45);}',
+            '  .dsh-app.is-rail-open .dsh-scrim{display:block;}',
+            '  .dsh-rail-btn{display:inline-flex;}',
             '}',
             '@media (max-width:900px){',
             '  .dsh-side{position:fixed; top:0; bottom:0; left:0; z-index:60; transform:translateX(-100%);',
@@ -811,11 +820,13 @@
 
     function buildMain() {
         var menuBtn = iconBtn('dsh-icon-btn-main dsh-menu-btn', 'menu', '展开侧栏', ICONS.panel);
+        var railBtn = iconBtn('dsh-icon-btn-main dsh-rail-btn', 'rail', '展开目录栏', ICONS.panelRight);
         var title = el('h1', { class: 'dsh-page-title', id: 'dsh-title' });
         var topbar = el('header', { class: 'dsh-topbar' }, [
             menuBtn,
             title,
-            el('span', { class: 'dsh-badge', text: WIKI.pageBadge })
+            el('span', { class: 'dsh-badge', text: WIKI.pageBadge }),
+            railBtn
         ]);
 
         var article = el('article', { class: 'dsh-article', id: 'dsh-article' });
@@ -949,6 +960,11 @@
                 e.preventDefault();
                 h.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 setTocActive(a);
+                // 抽屉形态下点完目录就收起来，不然挡住正文
+                if (window.matchMedia('(max-width: 1024px)').matches) {
+                    var app = document.getElementById('dsh-app');
+                    if (app) closeDrawers(app);
+                }
             });
             links.push({ node: a, head: h });
             body.appendChild(a);
@@ -1106,11 +1122,22 @@
     function toggleSidebar() {
         var app = document.getElementById('dsh-app');
         if (window.matchMedia('(max-width: 900px)').matches) {
-            app.classList.toggle('is-side-open');
+            if (app.classList.toggle('is-side-open')) app.classList.remove('is-rail-open');   // 两个抽屉不同时开
         } else {
             var collapsed = app.classList.toggle('is-side-collapsed');
             try { localStorage.setItem(SIDE_KEY, collapsed ? '1' : '0'); } catch (e) { /* 忽略 */ }
         }
+    }
+
+    // 窄屏时右边栏（目录/信息）也做成抽屉
+    function toggleRail() {
+        var app = document.getElementById('dsh-app');
+        if (app.classList.toggle('is-rail-open')) app.classList.remove('is-side-open');
+    }
+
+    function closeDrawers(app) {
+        app.classList.remove('is-side-open');
+        app.classList.remove('is-rail-open');
     }
 
     /* ------------------------------ 启动 ------------------------------ */
@@ -1177,6 +1204,7 @@
             if (!btn) return;
             var act = btn.dataset.act;
             if (act === 'collapse' || act === 'menu') toggleSidebar();
+            else if (act === 'rail') toggleRail();
             else if (act === 'theme') toggleTheme();
             else if (act === 'focus-search') { e.preventDefault(); refs.input.focus(); }
         });
@@ -1188,7 +1216,7 @@
         });
 
         document.getElementById('dsh-scrim').addEventListener('click', function () {
-            app.classList.remove('is-side-open');
+            closeDrawers(app);
         });
 
         // 右侧栏标签
@@ -1231,13 +1259,14 @@
             } else if (e.key === '/' && !typing) {
                 e.preventDefault(); refs.input.focus();
             } else if (e.key === 'Escape') {
-                app.classList.remove('is-side-open');
+                closeDrawers(app);
             }
         });
 
-        // 回到桌面宽度时清掉移动端抽屉状态
+        // 回到桌面宽度时清掉抽屉状态
         window.addEventListener('resize', function () {
             if (!window.matchMedia('(max-width: 900px)').matches) app.classList.remove('is-side-open');
+            if (!window.matchMedia('(max-width: 1024px)').matches) app.classList.remove('is-rail-open');
         });
     }
 
