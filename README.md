@@ -104,3 +104,4 @@
 - 禁用 JavaScript 时页面没有样式，只会显示纯正文。
 - 快捷键：`/` 或 `Ctrl`+`K` 聚焦搜索框，`↑` `↓` 选择结果，`Enter` 打开，`Esc` 收起。
 - 侧栏底部的「设置」可以切换浅色／深色，选择会记住。
+- 最高的维基是6号[PIZd/index.html](https://caldson.us.ci/pages/PIZd/index.html)
