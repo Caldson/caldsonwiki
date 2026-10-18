@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitual XRing API 文档 - 小咖的维基</title>
+    <script type="application/json" id="page-meta">
+    {
+        "name": "Vitual XRing API 文档",
+        "descript": "Vitual XRing 的 API/SDK 开发文档",
+        "pageno": 8
+    }
+    </script>
+</head>
+<body>
+    <h1>Vitual XRing API 文档</h1>
+    <blockquote>本文是以<a href="https://xsmmc.caldson.us.ci/API-docs.md">API-docs.md</a>进行制作的。</blockquote>
+    <p>账户服务 API，用于在其它站点登录 Vitual XRing 账户并同步全部账户信息。</p>
+    <ul>
+    <li>基础地址：<code>https://xsmmc.caldson.us.ci</code></li>
+    <li>所有接口均返回 JSON，字符集 UTF-8</li>
+    <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
+    <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
+    <li>API 版本：<code>1.4.0</code>（<code>data</code> 改为按游戏名分区，见第 3.1 节）</li>
+    <li>以下是我们认为最有帮助的部分：<ul>
+        <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
+        <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
+    </ul></li>
+    </ul>
+    <hr>
+    <h2 id="1. 快速开始">1. 快速开始</h2>
+    <h3 id="1.1 浏览器（推荐，使用 SDK）">1.1 浏览器（推荐，使用 SDK）</h3>
+    <pre><code class="language-html">&lt;script src=&quot;https://xsmmc.caldson.us.ci/vtx-sdk.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+    VTX.configure({ baseUrl: &quot;https://xsmmc.caldson.us.ci&quot; });
+
+    const session = await VTX.login(&quot;账户名称&quot;, &quot;你的密码&quot;);
+    console.log(session.account.username, session.account.money);
+
+    const all = await VTX.accounts();     // 同步全部账户
+    console.log(all.count, all.accounts);
+&lt;/script&gt;
+</code></pre>
+    <h3 id="1.2 直接调用 HTTP">1.2 直接调用 HTTP</h3>
+    <pre><code class="language-bash"># 登录，拿到 token
+curl -X POST https://xsmmc.caldson.us.ci/api/login \
+  -H &quot;content-type: application/json&quot; \
+  -d '{&quot;login&quot;:&quot;账户名称&quot;,&quot;password&quot;:&quot;你的密码&quot;}'
+
+# 用 token 读取全部账户
+curl https://xsmmc.caldson.us.ci/api/accounts \
+  -H &quot;authorization: Bearer &lt;token&gt;&quot;
+</code></pre>
+    <blockquote>
+    <p>站点的 Cloudflare 机器人防护可能会拦截非浏览器请求（返回 403）。
+    若需服务端调用，请在 Cloudflare WAF 中为 <code>/api/*</code> 添加放行规则。</p>
+    </blockquote>
+    <hr>
+    <h2 id="2. 认证">2. 认证</h2>
+    <ul>
+    <li>调用 <code>POST /api/login</code> 用登录名 + 密码换取 <strong>token</strong></li>
+    <li>后续请求在请求头携带：<code>Authorization: Bearer &lt;token&gt;</code></li>
+    <li>token 为 HMAC-SHA256 签名（<code>base64url(payload).base64url(signature)</code>），<strong>默认 12 小时有效</strong></li>
+    <li>token 无状态：服务端不存储会话；轮换 <code>SIGNING_SECRET</code> 会让所有 token 立即失效</li>
+    </ul>
+    <p><strong>载荷结构</strong></p>
+    <pre><code class="language-json">{ &quot;sub&quot;: &quot;账户名称&quot;, &quot;iat&quot;: 1760688000, &quot;exp&quot;: 1760731200, &quot;iss&quot;: &quot;vtx-api&quot; }
+</code></pre>
+    <p><code>sub</code> 为<strong>登录账户名</strong>（JSON 键），不是显示用的用户名。</p>
+    <hr>
+    <h2 id="3. 数据模型">3. 数据模型</h2>
+    <h3 id="3.1 Account（对外返回，已剥离密码）">3.1 Account（对外返回，已剥离密码）</h3>
+    <pre><code class="language-json">{
+    &quot;username&quot;: &quot;用户名&quot;,
+    &quot;money&quot;: &quot;100.00&quot;,
+    &quot;trades&quot;: [
+        {
+            &quot;name&quot;: &quot;转账&quot;,
+            &quot;description&quot;: &quot;备注示例&quot;,
+            &quot;time&quot;: &quot;2026/10/17&quot;,
+            &quot;from&quot;: &quot;用户名&quot;,
+            &quot;to&quot;: &quot;另一个用户名&quot;,
+            &quot;price&quot;: &quot;-50.00&quot;
+        }
+    ],
+    &quot;data&quot;: {
+        &quot;Decrive&quot;: {
+            &quot;boost&quot;: 1,
+            &quot;stats&quot;: { &quot;charts&quot;: {}, &quot;last&quot;: null }
+        },
+        &quot;另一个游戏&quot;: {
+            &quot;自定义键&quot;: &quot;值&quot;
+        }
+    }
+}
+</code></pre>
+    <p><code>data</code> 的第一层键是<strong>游戏名称</strong>（调用方自定义，允许中英文、数字、空格、<code>_</code>、<code>.</code>、<code>-</code>，1–32 字符），
+    第二层才是该游戏自己的数据。不同游戏互不干扰，删除某个游戏的数据不会影响其它游戏。</p>
+    <table>
+    <thead>
+    <tr>
+    <th>字段</th>
+    <th>类型</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>username</code></td>
+    <td>string</td>
+    <td>显示用用户名（可修改，不唯一）</td>
+    </tr>
+    <tr>
+    <td><code>money</code></td>
+    <td>string</td>
+    <td>余额，保留两位小数的字符串，单位 VTX</td>
+    </tr>
+    <tr>
+    <td><code>trades</code></td>
+    <td>array</td>
+    <td>交易记录，按追加顺序；展示时按 <code>time</code> 倒序</td>
+    </tr>
+    <tr>
+    <td><code>data</code></td>
+    <td>object</td>
+    <td>按游戏名分区的自定义数据（<code>data["游戏名称"] = {...}</code>），默认 <code>{}</code>，只能由本人通过 API 写入</td>
+    </tr>
+    </tbody>
+    </table>
+    <blockquote>
+    <p>任何接口都<strong>不会返回密码</strong>。</p>
+    </blockquote>
+    <h3 id="3.2 Trade">3.2 Trade</h3>
+    <table>
+    <thead>
+    <tr>
+    <th>字段</th>
+    <th>类型</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>name</code></td>
+    <td>string</td>
+    <td>交易类型，如 <code>转账</code>、<code>官方福利</code>、<code>每日签到</code>、<code>提款</code>、<code>AI 聊天</code>、<code>AI 生图</code></td>
+    </tr>
+    <tr>
+    <td><code>description</code></td>
+    <td>string</td>
+    <td>备注</td>
+    </tr>
+    <tr>
+    <td><code>time</code></td>
+    <td>string</td>
+    <td><code>YYYY/MM/DD</code> 或 <code>YYYY/MM/DD HH:mm:ss</code></td>
+    </tr>
+    <tr>
+    <td><code>from</code></td>
+    <td>string</td>
+    <td>付款方显示名，或 <code>系统</code> / <code>官方</code></td>
+    </tr>
+    <tr>
+    <td><code>to</code></td>
+    <td>string</td>
+    <td>收款方显示名，或 <code>AI</code> / <code>XRingCR</code></td>
+    </tr>
+    <tr>
+    <td><code>price</code></td>
+    <td>string</td>
+    <td>带符号金额，如 <code>-50.00</code>、<code>+5.00</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <hr>
+    <h2 id="4. 接口列表">4. 接口列表</h2>
+    <table>
+    <thead>
+    <tr>
+    <th>方法</th>
+    <th>路径</th>
+    <th>需要 token</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>GET</td>
+    <td><code>/api/health</code></td>
+    <td>否</td>
+    <td>健康检查</td>
+    </tr>
+    <tr>
+    <td>POST</td>
+    <td><code>/api/login</code></td>
+    <td>否</td>
+    <td>登录，换取 token</td>
+    </tr>
+    <tr>
+    <td>POST</td>
+    <td><code>/api/register</code></td>
+    <td>否</td>
+    <td>创建账户并直接登录</td>
+    </tr>
+    <tr>
+    <td>GET</td>
+    <td><code>/api/me</code></td>
+    <td>是</td>
+    <td>当前登录账户信息</td>
+    </tr>
+    <tr>
+    <td>GET</td>
+    <td><code>/api/accounts</code></td>
+    <td>是</td>
+    <td>全部账户</td>
+    </tr>
+    <tr>
+    <td>GET</td>
+    <td><code>/api/accounts/{登录名}</code></td>
+    <td>是</td>
+    <td>单个账户</td>
+    </tr>
+    <tr>
+    <td>PUT</td>
+    <td><code>/api/me/data/{游戏名称}</code></td>
+    <td>是</td>
+    <td>写入某个游戏的数据（合并）</td>
+    </tr>
+    <tr>
+    <td>GET</td>
+    <td><code>/api/me/data/{游戏名称}</code></td>
+    <td>是</td>
+    <td>读取某个游戏的数据</td>
+    </tr>
+    <tr>
+    <td>DELETE</td>
+    <td><code>/api/me/data/{游戏名称}</code></td>
+    <td>是</td>
+    <td>删除某个游戏的全部数据</td>
+    </tr>
+    <tr>
+    <td>DELETE</td>
+    <td><code>/api/me/data/{游戏名称}/{键}</code></td>
+    <td>是</td>
+    <td>删除某个游戏下的单个键</td>
+    </tr>
+    <tr>
+    <td>PUT</td>
+    <td><code>/api/accounts/{登录名}/data/{游戏名称}</code></td>
+    <td>是</td>
+    <td>同上，显式指定账户（只能是自己）</td>
+    </tr>
+    <tr>
+    <td>GET</td>
+    <td><code>/api/accounts/{登录名}/data/{游戏名称}</code></td>
+    <td>是</td>
+    <td>同上</td>
+    </tr>
+    <tr>
+    <td>DELETE</td>
+    <td><code>/api/accounts/{登录名}/data/{游戏名称}[/{键}]</code></td>
+    <td>是</td>
+    <td>同上</td>
+    </tr>
+    <tr>
+    <td>POST</td>
+    <td><code>/api/me/trades</code></td>
+    <td>是</td>
+    <td>记一笔收款 / 付款（需密码确认）</td>
+    </tr>
+    <tr>
+    <td>POST</td>
+    <td><code>/api/accounts/{登录名}/trades</code></td>
+    <td>是</td>
+    <td>同上，显式指定账户（只能是自己）</td>
+    </tr>
+    </tbody>
+    </table>
+    <blockquote>
+    <p><strong>破坏性变更（1.4.0）</strong>：<code>/api/me/data</code>（不带游戏名）现在返回 <code>400 bad_request</code>，并提示新用法。
+    旧版平铺的 <code>data</code> 会被视为「键不是对象」，请把数据搬到 <code>data[游戏名称]</code> 下。</p>
+    </blockquote>
+    <p><code>GET /</code> 与 <code>GET /api</code> 同样返回健康检查结果。</p>
+    <hr>
+    <h3 id="4.1 健康检查">4.1 健康检查</h3>
+    <pre><code>GET /api/health
+</code></pre>
+    <p><strong>响应 <code>200</code></strong></p>
+    <pre><code class="language-json">{ &quot;name&quot;: &quot;Vitual XRing API&quot;, &quot;version&quot;: &quot;1.1.0&quot;, &quot;ok&quot;: true }
+</code></pre>
+    <hr>
+    <h3 id="4.2 登录">4.2 登录</h3>
+    <pre><code>POST /api/login
+content-type: application/json
+
+{ &quot;login&quot;: &quot;账户名称&quot;, &quot;password&quot;: &quot;你的密码&quot; }
+</code></pre>
+    <p><strong>响应 <code>200</code></strong></p>
+    <pre><code class="language-json">{
+    &quot;token&quot;: &quot;eyJzdWIiOiJLaXRh...&lt;base64url 签名&gt;&quot;,
+    &quot;expiresAt&quot;: &quot;2026-10-18T04:00:00.000Z&quot;,
+    &quot;login&quot;: &quot;账户名称&quot;,
+    &quot;account&quot;: {
+        &quot;username&quot;: &quot;用户名&quot;,
+        &quot;money&quot;: &quot;100.00&quot;,
+        &quot;trades&quot;: []
+    }
+}
+</code></pre>
+    <p><strong>错误</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th>状态码</th>
+    <th><code>error</code></th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>400</td>
+    <td><code>bad_request</code></td>
+    <td>请求体不是 JSON，或缺少 <code>login</code> / <code>password</code></td>
+    </tr>
+    <tr>
+    <td>401</td>
+    <td><code>invalid_credentials</code></td>
+    <td>登录名或密码不正确</td>
+    </tr>
+    <tr>
+    <td>429</td>
+    <td><code>too_many_requests</code></td>
+    <td>同一 IP 每分钟失败超过 10 次</td>
+    </tr>
+    <tr>
+    <td>500</td>
+    <td><code>server_misconfigured</code></td>
+    <td>服务端未配置 <code>SIGNING_SECRET</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <blockquote>
+    <p>登录名 = <code>account.json</code> 的键；<strong>用显示用户名（nickname）登录会失败</strong>，除非两者相同。</p>
+    </blockquote>
+    <hr>
+    <h3 id="4.2.1 创建账户">4.2.1 创建账户</h3>
+    <p>创建新账户并<strong>直接返回 token</strong>（相当于注册后自动登录）。</p>
+    <pre><code>POST /api/register
+content-type: application/json
+
+{
+    &quot;login&quot;: &quot;账户名称&quot;,
+    &quot;password&quot;: &quot;至少 6 位&quot;,
+    &quot;username&quot;: &quot;显示名称（选填）&quot;
+}
+</code></pre>
+    <p><strong>响应 <code>201</code></strong></p>
+    <pre><code class="language-json">{
+    &quot;token&quot;: &quot;eyJzdWIiOi...&quot;,
+    &quot;expiresAt&quot;: &quot;2026-10-18T04:00:00.000Z&quot;,
+    &quot;login&quot;: &quot;账户名称&quot;,
+    &quot;created&quot;: true,
+    &quot;account&quot;: { &quot;username&quot;: &quot;显示名称&quot;, &quot;money&quot;: &quot;0.00&quot;, &quot;trades&quot;: [], &quot;data&quot;: {} }
+}
+</code></pre>
+    <p><strong>约束</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th>项目</th>
+    <th>限制</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>登录名</td>
+    <td>2–20 个字符，<strong>不能包含空格</strong>，全局唯一</td>
+    </tr>
+    <tr>
+    <td>密码</td>
+    <td>至少 6 个字符</td>
+    </tr>
+    <tr>
+    <td>显示名称</td>
+    <td>最多 24 个字符，留空则与登录名相同</td>
+    </tr>
+    <tr>
+    <td>初始余额</td>
+    <td><code>0.00</code> VTX</td>
+    </tr>
+    <tr>
+    <td>频率</td>
+    <td>每 IP 每分钟 5 次</td>
+    </tr>
+    <tr>
+    <td>账户上限</td>
+    <td>500 个</td>
+    </tr>
+    <tr>
+    <td>服务端</td>
+    <td>必须配置 <code>GITHUB_TOKEN</code>，否则返回 <code>503 write_unavailable</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>登录名已被占用时返回 <code>409 account_exists</code>。</p>
+    <hr>
+    <h3 id="4.3 当前账户">4.3 当前账户</h3>
+    <pre><code>GET /api/me
+authorization: Bearer &lt;token&gt;
+</code></pre>
+    <p><strong>响应 <code>200</code></strong></p>
+    <pre><code class="language-json">{
+    &quot;login&quot;: &quot;账户名称&quot;,
+    &quot;expiresAt&quot;: &quot;2026-10-18T04:00:00.000Z&quot;,
+    &quot;account&quot;: { &quot;username&quot;: &quot;用户名&quot;, &quot;money&quot;: &quot;100.00&quot;, &quot;trades&quot;: [] }
+}
+</code></pre>
+    <hr>
+    <h3 id="4.4 全部账户">4.4 全部账户</h3>
+    <pre><code>GET /api/accounts
+authorization: Bearer &lt;token&gt;
+</code></pre>
+    <p><strong>响应 <code>200</code></strong></p>
+    <pre><code class="language-json">{
+    &quot;me&quot;: &quot;账户名称&quot;,
+    &quot;count&quot;: 2,
+    &quot;accounts&quot;: {
+        &quot;账户名称&quot;: { &quot;username&quot;: &quot;用户名&quot;, &quot;money&quot;: &quot;100.00&quot;, &quot;trades&quot;: [] },
+        &quot;另一个账户&quot;: { &quot;username&quot;: &quot;另一个用户名&quot;, &quot;money&quot;: &quot;20.00&quot;, &quot;trades&quot;: [] }
+    }
+}
+</code></pre>
+    <hr>
+    <h3 id="4.5 单个账户">4.5 单个账户</h3>
+    <pre><code>GET /api/accounts/{登录名}
+authorization: Bearer &lt;token&gt;
+</code></pre>
+    <p><strong>响应 <code>200</code></strong></p>
+    <pre><code class="language-json">{
+    &quot;login&quot;: &quot;另一个账户&quot;,
+    &quot;account&quot;: { &quot;username&quot;: &quot;另一个用户名&quot;, &quot;money&quot;: &quot;20.00&quot;, &quot;trades&quot;: [] }
+}
+</code></pre>
+    <p><strong>错误 <code>404</code></strong></p>
+    <pre><code class="language-json">{ &quot;error&quot;: &quot;not_found&quot;, &quot;message&quot;: &quot;账户不存在&quot; }
+</code></pre>
+    <hr>
+    <h3 id="4.6 写入游戏数据">4.6 写入游戏数据</h3>
+    <p>把游戏成绩、进度之类的数据写进自己账户的某个游戏分区，<strong>只会合并（merge），不会覆盖其它键或其它游戏</strong>。</p>
+    <pre><code>PUT /api/me/data/{游戏名称}
+authorization: ******
+content-type: application/json
+
+{ &quot;boost&quot;: 1, &quot;stats&quot;: { &quot;charts&quot;: {} } }
+</code></pre>
+    <p>也可以用显式账户路径（值必须是自己）：</p>
+    <pre><code>PUT /api/accounts/{登录名}/data/{游戏名称}
+</code></pre>
+    <p><strong>响应 <code>200</code></strong></p>
+    <pre><code class="language-json">{
+    &quot;ok&quot;: true,
+    &quot;login&quot;: &quot;账户名称&quot;,
+    &quot;game&quot;: &quot;Decrive&quot;,
+    &quot;keys&quot;: [&quot;boost&quot;, &quot;stats&quot;],
+    &quot;gameData&quot;: { &quot;boost&quot;: 1, &quot;stats&quot;: { &quot;charts&quot;: {} } },
+    &quot;data&quot;: { &quot;Decrive&quot;: { &quot;boost&quot;: 1, &quot;stats&quot;: { &quot;charts&quot;: {} } } }
+}
+</code></pre>
+    <p><code>gameData</code> 是该游戏合并后的完整数据，<code>data</code> 是账户里全部分区的数据。</p>
+    <p><strong>约束</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th>项目</th>
+    <th>限制</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>游戏名称</td>
+    <td>只能包含中英文、数字、空格、<code>_</code>、<code>.</code>、<code>-</code>，长度 1–32</td>
+    </tr>
+    <tr>
+    <td>单账户游戏数</td>
+    <td>最多 20 个分区</td>
+    </tr>
+    <tr>
+    <td>键名</td>
+    <td>只能包含字母、数字、<code>_</code>、<code>.</code>、<code>-</code>，长度 1–64</td>
+    </tr>
+    <tr>
+    <td>单次键数</td>
+    <td>最多 20 个</td>
+    </tr>
+    <tr>
+    <td>单账户数据总量</td>
+    <td>32 KB（整个 <code>data</code> 的 <code>JSON.stringify(...)</code> UTF-8 字节数）</td>
+    </tr>
+    <tr>
+    <td>写入频率</td>
+    <td>每 IP 每分钟 60 次</td>
+    </tr>
+    <tr>
+    <td>权限</td>
+    <td>只能写自己的账户（token 的 <code>sub</code> 必须等于 <code>{登录名}</code>）</td>
+    </tr>
+    </tbody>
+    </table>
+    <hr>
+    <h3 id="4.6.1 读取游戏数据">4.6.1 读取游戏数据</h3>
+    <pre><code>GET /api/me/data/{游戏名称}
+authorization: ******
+</code></pre>
+    <p>或</p>
+    <pre><code>GET /api/accounts/{登录名}/data/{游戏名称}
+</code></pre>
+    <p><strong>响应 <code>200</code></strong></p>
+    <pre><code class="language-json">{ &quot;ok&quot;: true, &quot;login&quot;: &quot;账户名称&quot;, &quot;game&quot;: &quot;Decrive&quot;, &quot;gameData&quot;: { &quot;boost&quot;: 1 } }
+</code></pre>
+    <p>从未写过的游戏返回 <code>gameData: {}</code>。</p>
+    <hr>
+    <h3 id="4.7 删除游戏数据">4.7 删除游戏数据</h3>
+    <p>删单个键：</p>
+    <pre><code>DELETE /api/me/data/{游戏名称}/{键}
+authorization: ******
+</code></pre>
+    <p>删掉整个分区：</p>
+    <pre><code>DELETE /api/me/data/{游戏名称}
+</code></pre>
+    <p>也可以换成 <code>/api/accounts/{登录名}/data/...</code>。</p>
+    <p><strong>响应 <code>200</code></strong></p>
+    <pre><code class="language-json">{ &quot;ok&quot;: true, &quot;login&quot;: &quot;账户名称&quot;, &quot;game&quot;: &quot;Decrive&quot;, &quot;removed&quot;: &quot;boost&quot;, &quot;data&quot;: { &quot;Decrive&quot;: { &quot;stats&quot;: {} } } }
+</code></pre>
+    <p>游戏分区或键不存在时返回 <code>404 not_found</code>；删整个分区时 <code>removed</code> 就是该游戏名称。</p>
+    <hr>
+    <h3 id="4.8 记一笔收款 / 付款">4.8 记一笔收款 / 付款</h3>
+    <p>给自己的账户追加一条交易记录，并同步修改余额。<strong>必须携带账户密码</strong>（二次确认，防止 token 被盗后被刷）。</p>
+    <pre><code>POST /api/me/trades
+authorization: Bearer &lt;token&gt;
+content-type: application/json
+
+{
+    &quot;type&quot;: &quot;payment&quot;,
+    &quot;amount&quot;: &quot;12.34&quot;,
+    &quot;party&quot;: &quot;示例网站&quot;,
+    &quot;description&quot;: &quot;购买道具&quot;,
+    &quot;password&quot;: &quot;账户密码&quot;
+}
+</code></pre>
+    <p>也可用显式账户路径（<code>{登录名}</code> 必须是自己）：</p>
+    <pre><code>POST /api/accounts/{登录名}/trades
+</code></pre>
+    <p><strong>请求字段</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th>字段</th>
+    <th>必填</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>type</code></td>
+    <td>是</td>
+    <td><code>payment</code>（付款，扣余额）或 <code>receipt</code>（收款，加余额）</td>
+    </tr>
+    <tr>
+    <td><code>amount</code></td>
+    <td>是</td>
+    <td>正数字符串或数字，最多两位小数，单笔上限 <code>1000000.00</code></td>
+    </tr>
+    <tr>
+    <td><code>party</code></td>
+    <td>是</td>
+    <td>付款填<strong>去向</strong>，收款填<strong>来源</strong>（账户显示名或网站名），最长 40 字符</td>
+    </tr>
+    <tr>
+    <td><code>description</code></td>
+    <td>否</td>
+    <td>备注，最长 200 字符</td>
+    </tr>
+    <tr>
+    <td><code>name</code></td>
+    <td>否</td>
+    <td>记录名称，默认 <code>付款</code> / <code>收款</code>，最长 20 字符</td>
+    </tr>
+    <tr>
+    <td><code>password</code></td>
+    <td>是</td>
+    <td>当前账户的登录密码</td>
+    </tr>
+    </tbody>
+    </table>
+    <p><strong>生成的记录</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th><code>type</code></th>
+    <th><code>name</code></th>
+    <th><code>price</code></th>
+    <th><code>from</code></th>
+    <th><code>to</code></th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>payment</code></td>
+    <td><code>付款</code></td>
+    <td><code>-12.34</code></td>
+    <td>本人显示名</td>
+    <td><code>party</code></td>
+    </tr>
+    <tr>
+    <td><code>receipt</code></td>
+    <td><code>收款</code></td>
+    <td><code>+12.34</code></td>
+    <td><code>party</code></td>
+    <td>本人显示名</td>
+    </tr>
+    </tbody>
+    </table>
+    <p><code>time</code> 为北京时间 <code>YYYY/MM/DD HH:mm:ss</code>。</p>
+    <p><strong>响应 <code>200</code></strong></p>
+    <pre><code class="language-json">{
+    &quot;ok&quot;: true,
+    &quot;login&quot;: &quot;账户名称&quot;,
+    &quot;trade&quot;: {
+        &quot;name&quot;: &quot;付款&quot;,
+        &quot;description&quot;: &quot;购买道具&quot;,
+        &quot;time&quot;: &quot;2026/10/17 18:30:12&quot;,
+        &quot;from&quot;: &quot;用户名&quot;,
+        &quot;to&quot;: &quot;示例网站&quot;,
+        &quot;price&quot;: &quot;-12.34&quot;
+    },
+    &quot;account&quot;: { &quot;username&quot;: &quot;用户名&quot;, &quot;money&quot;: &quot;87.66&quot;, &quot;trades&quot;: [], &quot;data&quot;: {} }
+}
+</code></pre>
+    <p><strong>约束</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th>项目</th>
+    <th>限制</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>密码</td>
+    <td>必须与账户当前密码一致，否则 <code>400 invalid_password</code>（不会产生记录）</td>
+    </tr>
+    <tr>
+    <td>余额</td>
+    <td><code>payment</code> 时余额必须足够，否则 <code>400 insufficient_funds</code></td>
+    </tr>
+    <tr>
+    <td>权限</td>
+    <td>只能给自己记账（token 的 <code>sub</code> 必须等于 <code>{登录名}</code>），否则 <code>403 forbidden</code></td>
+    </tr>
+    <tr>
+    <td>频率</td>
+    <td>每 IP 每分钟 20 次，超出 <code>429 too_many_requests</code></td>
+    </tr>
+    <tr>
+    <td>并发</td>
+    <td>余额校验与写入在同一次提交内完成，服务端冲突自动重试 3 次</td>
+    </tr>
+    </tbody>
+    </table>
+    <blockquote>
+    <p>这条接口只做<strong>记账</strong>：<code>party</code> 是自由文本，不会给对方账户加减钱。需要账户间真实转账，请在站内 <code>manager.html</code> 操作。</p>
+    </blockquote>
+    <hr>
+    <h2 id="5. 错误响应格式">5. 错误响应格式</h2>
+    <p>所有错误统一为：</p>
+    <pre><code class="language-json">{ &quot;error&quot;: &quot;错误码&quot;, &quot;message&quot;: &quot;可读说明&quot; }
+</code></pre>
+    <table>
+    <thead>
+    <tr>
+    <th>状态码</th>
+    <th><code>error</code></th>
+    <th>含义</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>400</td>
+    <td><code>bad_request</code></td>
+    <td>参数缺失、格式错误、键名不合法</td>
+    </tr>
+    <tr>
+    <td>400</td>
+    <td><code>invalid_password</code></td>
+    <td>记账时密码不正确</td>
+    </tr>
+    <tr>
+    <td>400</td>
+    <td><code>insufficient_funds</code></td>
+    <td>付款金额超过当前余额</td>
+    </tr>
+    <tr>
+    <td>409</td>
+    <td><code>account_exists</code></td>
+    <td>创建账户时登录名已被占用</td>
+    </tr>
+    <tr>
+    <td>401</td>
+    <td><code>unauthorized</code></td>
+    <td>缺少 / 无效 / 过期的 Bearer token</td>
+    </tr>
+    <tr>
+    <td>401</td>
+    <td><code>invalid_credentials</code></td>
+    <td>登录名或密码错误</td>
+    </tr>
+    <tr>
+    <td>403</td>
+    <td><code>origin_not_allowed</code></td>
+    <td>请求来源不在 CORS 白名单</td>
+    </tr>
+    <tr>
+    <td>403</td>
+    <td><code>forbidden</code></td>
+    <td>试图修改别人的账户数据</td>
+    </tr>
+    <tr>
+    <td>404</td>
+    <td><code>not_found</code></td>
+    <td>接口、账户或数据键不存在</td>
+    </tr>
+    <tr>
+    <td>409</td>
+    <td><code>conflict</code></td>
+    <td>并发写入冲突（服务端已自动重试 3 次）</td>
+    </tr>
+    <tr>
+    <td>413</td>
+    <td><code>payload_too_large</code></td>
+    <td>自定义数据超过 32 KB</td>
+    </tr>
+    <tr>
+    <td>429</td>
+    <td><code>too_many_requests</code></td>
+    <td>登录或写入过于频繁</td>
+    </tr>
+    <tr>
+    <td>500</td>
+    <td><code>server_misconfigured</code></td>
+    <td>服务端缺少必要配置</td>
+    </tr>
+    <tr>
+    <td>502</td>
+    <td><code>upstream_error</code></td>
+    <td>读写账户数据源（GitHub）失败</td>
+    </tr>
+    <tr>
+    <td>503</td>
+    <td><code>write_unavailable</code></td>
+    <td>服务端未配置 <code>GITHUB_TOKEN</code>，无法写入</td>
+    </tr>
+    </tbody>
+    </table>
+    <hr>
+    <h2 id="6. CORS">6. CORS</h2>
+    <ul>
+    <li>允许方法：<code>GET, POST, PUT, DELETE, OPTIONS</code></li>
+    <li>允许请求头：<code>authorization, content-type</code></li>
+    <li>预检请求返回 <code>204</code></li>
+    <li>允许的来源由 <code>ALLOWED_ORIGINS</code> 决定（逗号分隔，<code>*</code> 表示任意）</li>
+    <li>不在白名单的来源会收到 <code>403 origin_not_allowed</code></li>
+    </ul>
+    <hr>
+    <h2 id="7. 缓存与数据来源">7. 缓存与数据来源</h2>
+    <ul>
+    <li>数据来源：仓库 <code>Caldson/Vitual-XRing</code> 的 <code>account.json</code></li>
+    <li>存在 <code>GITHUB_TOKEN</code> 时走 GitHub Contents API；否则回退 <code>raw.githubusercontent.com</code></li>
+    <li>Worker 内部缓存默认 <strong>20 秒</strong>（<code>CACHE_TTL_SECONDS</code>），因此账户变动最多延迟约 20 秒可见</li>
+    <li>响应头统一 <code>cache-control: no-store</code>，浏览器不会缓存</li>
+    </ul>
+    <hr>
+    <h2 id="8. SDK 参考">8. SDK 参考</h2>
+    <p><code>vtx-sdk.js</code> 挂载全局对象 <code>VTX</code>，token 自动保存在 <code>localStorage</code>（键 <code>vtxApiToken</code>）。</p>
+    <table>
+    <thead>
+    <tr>
+    <th>方法</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>VTX.configure({ baseUrl })</code></td>
+    <td>设置 API 地址（必需，末尾斜杠会自动去除并持久化）</td>
+    </tr>
+    <tr>
+    <td><code>VTX.login(login, password)</code></td>
+    <td>登录，成功后自动保存 token，返回登录响应</td>
+    </tr>
+    <tr>
+    <td><code>VTX.register({ login, password, username })</code></td>
+    <td>创建账户并自动登录，返回带 <code>created: true</code> 的响应</td>
+    </tr>
+    <tr>
+    <td><code>VTX.setToken(token)</code></td>
+    <td>采纳外部（如 <code>API_LOGIN.html</code> 弹窗）拿到的 token</td>
+    </tr>
+    <tr>
+    <td><code>VTX.logout()</code></td>
+    <td>清除本地 token</td>
+    </tr>
+    <tr>
+    <td><code>VTX.isLoggedIn()</code></td>
+    <td>是否有 token</td>
+    </tr>
+    <tr>
+    <td><code>VTX.me()</code></td>
+    <td>当前账户</td>
+    </tr>
+    <tr>
+    <td><code>VTX.accounts()</code></td>
+    <td>全部账户</td>
+    </tr>
+    <tr>
+    <td><code>VTX.account(login)</code></td>
+    <td>单个账户</td>
+    </tr>
+    <tr>
+    <td><code>VTX.setData(game, values)</code></td>
+    <td>写入某个游戏的分区数据（合并），返回 <code>{ ok, login, game, keys, gameData, data }</code></td>
+    </tr>
+    <tr>
+    <td><code>VTX.getData(game)</code></td>
+    <td>读取某个游戏的分区数据，返回 <code>{ ok, login, game, gameData }</code></td>
+    </tr>
+    <tr>
+    <td><code>VTX.deleteData(game)</code></td>
+    <td>删除某个游戏的全部分区数据</td>
+    </tr>
+    <tr>
+    <td><code>VTX.deleteData(game, key)</code></td>
+    <td>删除某个游戏分区下的单个键</td>
+    </tr>
+    <tr>
+    <td><code>VTX.pay({ amount, party, description, password })</code></td>
+    <td>记一笔付款（扣余额）</td>
+    </tr>
+    <tr>
+    <td><code>VTX.receive({ amount, party, description, password })</code></td>
+    <td>记一笔收款（加余额）</td>
+    </tr>
+    <tr>
+    <td><code>VTX.trade({ type, amount, party, description, name, password })</code></td>
+    <td>上面两个的通用形式</td>
+    </tr>
+    <tr>
+    <td><code>VTX.getToken()</code></td>
+    <td>当前 token（无则空字符串）</td>
+    </tr>
+    <tr>
+    <td><code>VTX.baseUrl</code></td>
+    <td>当前生效的 API 地址</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>失败时抛出 <code>Error</code>，附带：</p>
+    <ul>
+    <li><code>error.status</code>：HTTP 状态码</li>
+    <li><code>error.code</code>：接口返回的 <code>error</code> 字段</li>
+    </ul>
+    <pre><code class="language-js">try {
+    await VTX.login(&quot;账户名称&quot;, &quot;错误密码&quot;);
+} catch (error) {
+    console.log(error.status, error.code);   // 401 invalid_credentials
+}
+</code></pre>
+    <p><strong>写入游戏数据示例</strong></p>
+    <pre><code class="language-js">await VTX.login(&quot;账户名称&quot;, &quot;密码&quot;);
+
+// 第一个参数是游戏名称，第二个才是数据；合并写入，不会覆盖其它键或其它游戏
+await VTX.setData(&quot;Decrive&quot;, { boost: 1 });
+
+// 读回来
+const mine = await VTX.getData(&quot;Decrive&quot;);
+console.log(mine.gameData.boost);        // 1
+
+// 登录后返回的账户里也带全部分区
+const me = await VTX.me();
+console.log(me.account.data.Decrive.boost);
+
+// 删除某个键 / 删除整个游戏分区
+await VTX.deleteData(&quot;Decrive&quot;, &quot;boost&quot;);
+await VTX.deleteData(&quot;Decrive&quot;);
+</code></pre>
+    <p><strong>记账示例</strong></p>
+    <pre><code class="language-js">await VTX.login(&quot;账户名称&quot;, &quot;密码&quot;);
+
+// 付款 12.34 VTX 给某个网站
+const paid = await VTX.pay({
+    amount: &quot;12.34&quot;,
+    party: &quot;示例网站&quot;,
+    description: &quot;购买道具&quot;,   // 选填
+    password: &quot;账户密码&quot;       // 必填：二次确认
+});
+console.log(paid.trade.price, paid.account.money);   // -12.34  87.66
+
+// 收款 5.00 VTX 来自某个网站
+await VTX.receive({ amount: &quot;5.00&quot;, party: &quot;游戏站&quot;, password: &quot;账户密码&quot; });
+</code></pre>
+    <hr>
+    <h2 id="9. 登录页（API_LOGIN.html）">9. 登录页（API_LOGIN.html）</h2>
+    <p><code>API_LOGIN.html</code> 是给其它站点用的登录页：能自动登录就自动登录，否则用登录名 + 密码换取 VTX 余额。</p>
+    <p><strong>地址</strong></p>
+    <pre><code>https://xsmmc.caldson.us.ci/API_LOGIN.html
+</code></pre>
+    <p><strong>可选参数</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th>参数</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>api</code></td>
+    <td>API 地址，默认当前域名；本地静态预览（<code>localhost</code> / <code>127.0.0.1</code>）时默认 <code>https://xsmmc.caldson.us.ci</code>，跨域或本地 Worker 时用它覆盖</td>
+    </tr>
+    <tr>
+    <td><code>redirect</code></td>
+    <td>登录成功后跳回的地址，会附带 <code>vtx_*</code> 参数</td>
+    </tr>
+    <tr>
+    <td><code>tab</code></td>
+    <td><code>register</code> 时直接打开「创建账户」标签页</td>
+    </tr>
+    <tr>
+    <td><code>embed</code></td>
+    <td><code>1</code> 表示被 iframe 嵌入：<strong>跳过自动登录</strong>，始终显示表单</td>
+    </tr>
+    </tbody>
+    </table>
+    <p><strong>示例</strong></p>
+    <pre><code>https://xsmmc.caldson.us.ci/API_LOGIN.html?redirect=https://example.com/callback
+https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
+</code></pre>
+    <p>登录成功后跳转到：</p>
+    <pre><code>https://example.com/callback?vtx_result=&lt;URL 编码的 VTX.login() 结果 JSON&gt;
+</code></pre>
+    <p>若结果 JSON 过长，则改为：</p>
+    <pre><code>https://example.com/callback?vtx_login=账户名称&amp;vtx_token=&lt;token&gt;&amp;vtx_money=100.00
+</code></pre>
+    <p><strong>行为</strong></p>
+    <ol>
+    <li>若浏览器中已有有效 token（<code>VTX.isLoggedIn()</code>）且未带 <code>embed=1</code>，调用 <code>GET /api/me</code> 自动登录</li>
+    <li>否则显示「登录 / 创建账户」两个标签页</li>
+    <li>成功后页面显示 <strong>「登录成功，如果没有自动跳转，请刷新并重试。」</strong>，并同时向 <code>window.opener</code> / <code>window.parent</code> 回传完整结果</li>
+    </ol>
+    <blockquote>
+    <p>页面本身不再展示 VTX 余额；需要余额的站点请从回传结果或 <code>GET /api/me</code> 读取。
+    「开发者信息」折叠区里仍保留完整 JSON 与复制按钮，供手动联调使用。</p>
+    </blockquote>
+    <p><strong>回传的返回值</strong></p>
+    <pre><code class="language-json">{
+    &quot;token&quot;: &quot;eyJzdWIiOi...&quot;,
+    &quot;expiresAt&quot;: &quot;2026-10-18T04:00:00.000Z&quot;,
+    &quot;login&quot;: &quot;账户名称&quot;,
+    &quot;account&quot;: {
+        &quot;username&quot;: &quot;用户名&quot;,
+        &quot;money&quot;: &quot;100.00&quot;,
+        &quot;trades&quot;: []
+    }
+}
+</code></pre>
+    <p><strong>弹窗 / 内嵌方式</strong>：向 <code>window.opener</code> 以及 <code>window.parent</code>（iframe 嵌入时）发送</p>
+    <pre><code class="language-js">{ type: &quot;vtx-login&quot;, ok: true, result: /* 上面这个对象 */ }
+</code></pre>
+    <p><strong>跳转方式</strong>：<code>?redirect=</code> 会附加 <code>vtx_result</code>（完整的 JSON，URL 编码）；
+    若该 JSON 过长（&gt; 6000 字符），退化为 <code>vtx_login</code>、<code>vtx_token</code>、<code>vtx_money</code> 三个参数。</p>
+    <blockquote>
+    <p><code>redirect</code> 会把 token 拼进 URL，注意它可能出现在浏览器历史与服务器日志中。对安全性要求高的场景，建议改用弹窗 + <code>postMessage</code> 方式。</p>
+    </blockquote>
+    <hr>
+    <h2 id="9.1 记账页（API_VTXPAY.html）">9.1 记账页（API_VTXPAY.html）</h2>
+    <p>给其它站点用的收款 / 付款页面，背后调用 <code>POST /api/me/trades</code>。</p>
+    <p><strong>地址</strong></p>
+    <pre><code>https://xsmmc.caldson.us.ci/API_VTXPAY.html
+</code></pre>
+    <p><strong>可选参数</strong></p>
+    <table>
+    <thead>
+    <tr>
+    <th>参数</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>api</code></td>
+    <td>API 地址，规则与 <code>API_LOGIN.html</code> 相同</td>
+    </tr>
+    <tr>
+    <td><code>type</code></td>
+    <td><code>payment</code>（默认）或 <code>receipt</code>，决定打开时的初始页签</td>
+    </tr>
+    <tr>
+    <td><code>party</code></td>
+    <td>预填对方（付款去向 / 收款来源）</td>
+    </tr>
+    <tr>
+    <td><code>amount</code></td>
+    <td>预填金额，如 <code>5.00</code></td>
+    </tr>
+    <tr>
+    <td><code>description</code></td>
+    <td>预填描述</td>
+    </tr>
+    <tr>
+    <td><code>lock</code></td>
+    <td><code>1</code> 时锁定上述字段且禁止切换付款/收款（用于固定商品）</td>
+    </tr>
+    <tr>
+    <td><code>close</code></td>
+    <td><code>1</code> 时付款成功后自动关闭窗口（仅对弹窗有效）</td>
+    </tr>
+    <tr>
+    <td><code>embed</code></td>
+    <td><code>1</code> 表示被 iframe 嵌入</td>
+    </tr>
+    </tbody>
+    </table>
+    <p><strong>示例（固定商品付款）</strong></p>
+    <pre><code>https://xsmmc.caldson.us.ci/API_VTXPAY.html?party=Decrive%20音游&amp;amount=5.00&amp;description=全%20PERFECT%20道具&amp;lock=1
+</code></pre>
+    <p><strong>成功回调</strong>：向 <code>window.opener</code> 与 <code>window.parent</code> 发送</p>
+    <pre><code class="language-js">{ type: &quot;vtx-pay&quot;, ok: true, kind: &quot;payment&quot;, trade: { /* Trade */ }, account: { /* Account */ } }
+</code></pre>
+    <p><strong>流程</strong></p>
+    <ol>
+    <li>已有有效 token 时调 <code>GET /api/me</code> 自动登录，否则显示登录表单</li>
+    <li>选择「付款 / 收款」，填对方、金额、描述（选填）、<strong>密码</strong></li>
+    <li>提交后页面展示记录详情（名称 / 金额 / 流向 / 描述 / 时间）与最新余额</li>
+    </ol>
+    <p>站内也可用 iframe 嵌它，把 <code>type=payment</code> 直接落到付款页签：</p>
+    <pre><code class="language-html">&lt;iframe src=&quot;https://xsmmc.caldson.us.ci/API_VTXPAY.html?type=payment&quot;
+        style=&quot;width:440px;height:640px;border:0&quot;&gt;&lt;/iframe&gt;
+</code></pre>
+    <hr>
+    <h2 id="10. 服务端配置">10. 服务端配置</h2>
+    <p><code>worker/wrangler.toml</code>：</p>
+    <table>
+    <thead>
+    <tr>
+    <th>变量</th>
+    <th>默认值</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>REPO</code></td>
+    <td><code>Caldson/Vitual-XRing</code></td>
+    <td>账户文件所在仓库</td>
+    </tr>
+    <tr>
+    <td><code>BRANCH</code></td>
+    <td><code>main</code></td>
+    <td>分支</td>
+    </tr>
+    <tr>
+    <td><code>PATH</code></td>
+    <td><code>account.json</code></td>
+    <td>文件路径</td>
+    </tr>
+    <tr>
+    <td><code>ALLOWED_ORIGINS</code></td>
+    <td><code>*</code></td>
+    <td>CORS 白名单，逗号分隔</td>
+    </tr>
+    <tr>
+    <td><code>TOKEN_TTL_SECONDS</code></td>
+    <td><code>43200</code></td>
+    <td>token 有效期（秒）</td>
+    </tr>
+    <tr>
+    <td><code>CACHE_TTL_SECONDS</code></td>
+    <td><code>20</code></td>
+    <td>账户数据缓存（秒）</td>
+    </tr>
+    </tbody>
+    </table>
+    <p>机密（用 <code>wrangler secret put</code> 设置，不要写进仓库）：</p>
+    <table>
+    <thead>
+    <tr>
+    <th>名称</th>
+    <th>必需</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>SIGNING_SECRET</code></td>
+    <td>是</td>
+    <td>token 签名密钥，泄露后需更换（所有 token 立即失效）</td>
+    </tr>
+    <tr>
+    <td><code>GITHUB_TOKEN</code></td>
+    <td>否</td>
+    <td>读写仓库用；<strong>不配置则只能读</strong>（回退 <code>raw.githubusercontent.com</code>），写入接口返回 <code>503</code></td>
+    </tr>
+    </tbody>
+    </table>
+    <p>部署：</p>
+    <pre><code class="language-bash">cd worker
+npx wrangler login
+npx wrangler secret put GITHUB_TOKEN
+npx wrangler secret put SIGNING_SECRET
+npx wrangler deploy
+</code></pre>
+    <p>路由绑定见 <a href="./worker/wrangler.toml">worker/wrangler.toml</a>（<code>xsmmc.caldson.us.ci/api/*</code>）。</p>
+    <h3 id="本地调试">本地调试</h3>
+    <p><code>npx http-server</code> 只是静态服务器，<strong>没有</strong> <code>/api/*</code>，请求会返回 404/405——这不是代码问题。两种做法：</p>
+    <p><strong>A. 部署后直接测线上</strong>（推荐）</p>
+    <pre><code class="language-bash">cd worker
+npx wrangler deploy
+</code></pre>
+    <p>然后访问 <code>https://xsmmc.caldson.us.ci/API_LOGIN.html</code>。本地想预览页面也行，只要 <code>?api=</code> 指向线上地址：</p>
+    <pre><code>http://127.0.0.1:3000/API_LOGIN.html?api=https://xsmmc.caldson.us.ci
+</code></pre>
+    <blockquote>
+    <p>页面在 <code>localhost</code> / <code>127.0.0.1</code> 上且没写 <code>?api=</code> 时，会自动连 <code>https://xsmmc.caldson.us.ci</code>。</p>
+    </blockquote>
+    <p><strong>B. 本地跑 Worker</strong></p>
+    <pre><code class="language-bash">cd worker
+cp .dev.vars.example .dev.vars    # 填入 GITHUB_TOKEN / SIGNING_SECRET
+npx wrangler dev                  # 默认 http://127.0.0.1:8787
+</code></pre>
+    <p>静态页照旧用 http-server 起，然后把 <code>api</code> 指向本地 Worker：</p>
+    <pre><code>http://127.0.0.1:3000/API_LOGIN.html?api=http://127.0.0.1:8787
+</code></pre>
+    <p><code>.dev.vars</code> 已加入 <code>.gitignore</code>，不会误提交。</p>
+    <hr>
+    <h2 id="11. 安全说明">11. 安全说明</h2>
+    <ul>
+    <li>所有接口都不会返回密码字段</li>
+    <li>登录失败按 IP 限流：60 秒内最多 10 次</li>
+    <li>token 由 HMAC-SHA256 签名，篡改或过期即失效</li>
+    <li><strong>当前 <code>account.json</code> 中密码仍为明文且公开可读</strong>，任何人都能直接读取
+      <code>https://xsmmc.caldson.us.ci/account.json</code> 获取全部账户密码，
+      这将使本 API 的鉴权失去意义。建议后续改为 PBKDF2 哈希存储。</li>
+    </ul>
+    <script src="../../dsh-ui.js"></script>
+</body>
+</html>
