@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>1.5.0</code>（收款不再需要密码；<code>data</code> 按游戏名分区，见第 3.1 节）</li>
+    <li>API 版本：<code>5.0.0</code>（新增收款码；收款不需要密码；<code>data</code> 按游戏名分区，见第 3.1 节）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -267,6 +267,36 @@ curl https://xsmmc.caldson.us.ci/api/accounts \
     <td><code>/api/me/trades</code></td>
     <td>是</td>
     <td>记一笔收款（无需密码）/ 付款（需密码确认）</td>
+    </tr>
+    <tr>
+    <td>POST</td>
+    <td><code>/api/me/receipt-code</code></td>
+    <td>是</td>
+    <td>生成新的收款码（旧码立即失效）</td>
+    </tr>
+    <tr>
+    <td>GET</td>
+    <td><code>/api/me/receipt-code</code></td>
+    <td>是</td>
+    <td>读取当前收款码（不会重新生成）</td>
+    </tr>
+    <tr>
+    <td>DELETE</td>
+    <td><code>/api/me/receipt-code</code></td>
+    <td>是</td>
+    <td>撤销收款码</td>
+    </tr>
+    <tr>
+    <td>GET</td>
+    <td><code>/api/receipt-codes/{code}</code></td>
+    <td>否</td>
+    <td>解析收款码（收款人、金额）</td>
+    </tr>
+    <tr>
+    <td>POST</td>
+    <td><code>/api/receipt-codes/{code}/pay</code></td>
+    <td>是</td>
+    <td>扫收款码付款（需密码，收款方无需确认）</td>
     </tr>
     <tr>
     <td>POST</td>
@@ -682,6 +712,85 @@ content-type: application/json
     <blockquote>
     <p>这条接口只做<strong>记账</strong>：<code>party</code> 是自由文本，不会给对方账户加减钱。需要账户间真实转账，请在站内 <code>manager.html</code> 操作。</p>
     </blockquote>
+    <h3 id="4.9 收款码">4.9 收款码</h3>
+    <p>扫码付款用的一次性收款入口。码本身是可撤销的随机串，<strong>存在账户里</strong>，所以：</p>
+    <ul>
+    <li>只有主动「刷新」才会生成新码，重新打开页面、换设备打开都是同一个码</li>
+    <li>刷新后旧码立即失效（不会误收）</li>
+    <li><strong>收款方不需要做任何确认</strong>，付款方扫完码付完款，钱直接进账</li>
+    </ul>
+    <p><strong>生成 / 读取 / 撤销（需要 token）</strong></p>
+    <pre><code>POST /api/me/receipt-code
+    authorization: ******;token&gt;
+    content-type: application/json
+
+    { &quot;amount&quot;: &quot;12.50&quot; }          // 可省略；省略则由付款方自己填金额
+    </code></pre>
+    <pre><code class="language-json">{
+        &quot;ok&quot;: true,
+        &quot;login&quot;: &quot;账户名称&quot;,
+        &quot;payeeName&quot;: &quot;用户名&quot;,
+        &quot;code&quot;: &quot;Kq3fGb2xLmN0pQrStUvWxY&quot;,
+        &quot;amount&quot;: &quot;12.50&quot;,
+        &quot;createdAt&quot;: &quot;2026/10/19 20:00:00&quot;,
+        &quot;url&quot;: &quot;https://xsmmc.caldson.us.ci/API_VTXPAY.html?rc=Kq3fGb2xLmN0pQrStUvWxY&quot;
+    }
+    </code></pre>
+    <ul>
+    <li><code>GET /api/me/receipt-code</code> 读当前码（不会重新生成），没有码时 <code>code</code> 为 <code>null</code></li>
+    <li><code>DELETE /api/me/receipt-code</code> 撤销当前码</li>
+    </ul>
+    <p><strong>解析收款码（公开，不需要 token）</strong></p>
+    <pre><code>GET /api/receipt-codes/{code}
+    </code></pre>
+    <p>返回 <code>code</code>、<code>payee</code>、<code>payeeName</code>、<code>amount</code>、<code>createdAt</code>、<code>url</code>；码不存在或已被刷新替换时返回 <code>404 not_found</code>。</p>
+    <p><strong>扫码付款（需要 token + 密码）</strong></p>
+    <pre><code>POST /api/receipt-codes/{code}/pay
+    authorization: ******;token&gt;
+    content-type: application/json
+
+    { &quot;password&quot;: &quot;付款方密码&quot;, &quot;amount&quot;: &quot;12.50&quot; }
+    </code></pre>
+    <ul>
+    <li><code>amount</code> 只有在该收款码没有预设金额时才必填</li>
+    <li>收款方<strong>不需要确认</strong>，付款成功后钱立即入账</li>
+    <li>双方各追加一条记录：付款方 <code>付款 -12.50</code>，收款方 <code>收款 +12.50</code></li>
+    </ul>
+    <table>
+    <thead>
+    <tr>
+    <th>项目</th>
+    <th>限制</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>密码</td>
+    <td>付款方必须输入正确密码，否则 <code>400 invalid_password</code>（双方余额都不会变）</td>
+    </tr>
+    <tr>
+    <td>余额</td>
+    <td>付款方余额必须足够，否则 <code>400 insufficient_funds</code></td>
+    </tr>
+    <tr>
+    <td>自己的码</td>
+    <td>扫自己的收款码付款返回 <code>400 bad_request</code></td>
+    </tr>
+    <tr>
+    <td>码格式</td>
+    <td>只允许字母、数字、<code>_</code>、<code>-</code>，长度 16–64</td>
+    </tr>
+    <tr>
+    <td>频率</td>
+    <td>生成受写入限流（每分钟 60 次）；付款受记账限流（每分钟 20 次）</td>
+    </tr>
+    </tbody>
+    </table>
+    <blockquote>
+    <p>只在需要收钱时把码发给别人；码被转发出去谁都能用它给你打钱（不会扣你的钱），如果不想再收就点「撤销」。</p>
+    </blockquote>
+    <hr>
+    <h2 id="5. 错误响应格式">5. 错误响应格式</h2>
     <hr>
     <h2 id="5. 错误响应格式">5. 错误响应格式</h2>
     <p>所有错误统一为：</p>
@@ -866,6 +975,26 @@ content-type: application/json
     <td>上面两个的通用形式（<code>payment</code> 才需要 <code>password</code>）</td>
     </tr>
     <tr>
+    <td><code>VTX.createReceiptCode(amount?)</code></td>
+    <td>生成新的收款码（旧码立即失效），返回 <code>{ code, url, amount, createdAt }</code></td>
+    </tr>
+    <tr>
+    <td><code>VTX.receiptCode()</code></td>
+    <td>读取当前收款码（不会重新生成）</td>
+    </tr>
+    <tr>
+    <td><code>VTX.revokeReceiptCode()</code></td>
+    <td>撤销收款码</td>
+    </tr>
+    <tr>
+    <td><code>VTX.receiptCodeInfo(code)</code></td>
+    <td>解析收款码（公开接口，不需要登录）</td>
+    </tr>
+    <tr>
+    <td><code>VTX.payReceiptCode(code, { password, amount, description })</code></td>
+    <td>扫收款码付款，<code>amount</code> 仅在码上没预设金额时需要</td>
+    </tr>
+    <tr>
     <td><code>VTX.getToken()</code></td>
     <td>当前 token（无则空字符串）</td>
     </tr>
@@ -918,6 +1047,22 @@ console.log(paid.trade.price, paid.account.money);   // -12.34  87.66
 
 // 收款 5.00 VTX 来自某个网站
 await VTX.receive({ amount: &quot;5.00&quot;, party: &quot;游戏站&quot;, description: &quot;签到奖励&quot; });
+</code></pre>
+<p><strong>收款码示例</strong></p>
+<pre><code class="language-js">await VTX.login(&quot;账户名称&quot;, &quot;密码&quot;);
+
+// 生成 12.50 VTX 的收款码，把 url 画成二维码给别人扫
+const code = await VTX.createReceiptCode(&quot;12.50&quot;);
+console.log(code.url);        // https://xsmmc.caldson.us.ci/API_VTXPAY.html?rc=...
+
+// 换设备 / 刷新页面都读同一个码
+const same = await VTX.receiptCode();
+
+// 付款方扫到码之后（需要他自己的 token 和密码）
+await VTX.payReceiptCode(code.code, { password: &quot;付款方密码&quot; });
+
+// 不想再收了就撤销
+await VTX.revokeReceiptCode();
 </code></pre>
     <hr>
     <h2 id="9. 登录页（API_LOGIN.html）">9. 登录页（API_LOGIN.html）</h2>
@@ -1013,7 +1158,7 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     </tr>
     <tr>
     <td><code>type</code></td>
-    <td><code>payment</code>（默认）或 <code>receipt</code>，决定打开时的初始页签</td>
+    <td><code>payment</code>（默认）、<code>receipt</code> 或 <code>code</code>（收款码），决定打开时的初始页签</td>
     </tr>
     <tr>
     <td><code>party</code></td>
@@ -1039,6 +1184,10 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     <td><code>embed</code></td>
     <td><code>1</code> 表示被 iframe 嵌入</td>
     </tr>
+    <tr>
+    <td><code>rc</code></td>
+    <td>收款码，例如 <code>?rc=Kq3f...</code>；带上就直接进入「扫码付款」流程</td>
+    </tr>
     </tbody>
     </table>
     <p><strong>示例（固定商品付款）</strong></p>
@@ -1050,7 +1199,9 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     <p><strong>流程</strong></p>
     <ol>
     <li>已有有效 token 时调 <code>GET /api/me</code> 自动登录，否则显示登录表单</li>
-    <li>选择「付款 / 收款」，填对方、金额、描述（选填）；<strong>付款才需要再输一次密码</strong>，收款直接点「确认收款」到账</li>
+    <li>选择「付款 / 收款 / 收款码」，填对方、金额、描述（选填）；<strong>付款才需要再输一次密码</strong>，收款直接点「确认收款」到账</li>
+    <li>「收款码」页签里可以填金额、生成 / 刷新 / 撤销收款码，并把二维码图片保存到电脑或手机相册；只有点「刷新收款码」才会换新码</li>
+    <li>带 <code>rc</code> 参数时是另一条流程：解析收款码 → 登录 → 输入密码 → 直接付款（收款方无需确认）</li>
     <li>提交后页面展示记录详情（名称 / 金额 / 流向 / 描述 / 时间）与最新余额</li>
     </ol>
     <p>站内也可用 iframe 嵌它，把 <code>type=payment</code> 直接落到付款页签：</p>
