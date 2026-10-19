@@ -743,7 +743,7 @@ content-type: application/json
     <p><strong>解析收款码（公开，不需要 token）</strong></p>
     <pre><code>GET /api/receipt-codes/{code}
     </code></pre>
-    <p>返回 <code>code</code>、<code>payee</code>、<code>payeeName</code>、<code>amount</code>、<code>createdAt</code>、<code>url</code>；码不存在或已被刷新替换时返回 <code>404 not_found</code>。</p>
+    <p>返回 <code>code</code>、<code>payee</code>、<code>payeeName</code>、<code>amount</code>、<code>createdAt</code>、<code>url</code>；码不存在或已被刷新替换时返回 <code>404 not_found</code>。这个接口<strong>不走账户缓存</strong>，所以刷新/撤销后立即失效。</p>
     <p><strong>扫码付款（需要 token + 密码）</strong></p>
     <pre><code>POST /api/receipt-codes/{code}/pay
     authorization: ******;token&gt;
