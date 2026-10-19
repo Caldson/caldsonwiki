@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>1.4.0</code>（<code>data</code> 改为按游戏名分区，见第 3.1 节）</li>
+    <li>API 版本：<code>1.5.0</code>（收款不再需要密码；<code>data</code> 按游戏名分区，见第 3.1 节）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -266,7 +266,7 @@ curl https://xsmmc.caldson.us.ci/api/accounts \
     <td>POST</td>
     <td><code>/api/me/trades</code></td>
     <td>是</td>
-    <td>记一笔收款 / 付款（需密码确认）</td>
+    <td>记一笔收款（无需密码）/ 付款（需密码确认）</td>
     </tr>
     <tr>
     <td>POST</td>
@@ -534,7 +534,11 @@ authorization: ******
     <p>游戏分区或键不存在时返回 <code>404 not_found</code>；删整个分区时 <code>removed</code> 就是该游戏名称。</p>
     <hr>
     <h3 id="4.8 记一笔收款 / 付款">4.8 记一笔收款 / 付款</h3>
-    <p>给自己的账户追加一条交易记录，并同步修改余额。<strong>必须携带账户密码</strong>（二次确认，防止 token 被盗后被刷）。</p>
+    <p>给自己的账户追加一条交易记录，并同步修改余额。</p>
+    <ul>
+    <li><strong>付款（<code>payment</code>）必须携带账户密码</strong>（二次确认，防止 token 被盗后被刷）。</li>
+    <li><strong>收款（<code>receipt</code>）不需要密码</strong>，有有效 token 就能直接入账。</li>
+    </ul>
     <pre><code>POST /api/me/trades
 authorization: Bearer &lt;token&gt;
 content-type: application/json
@@ -545,6 +549,14 @@ content-type: application/json
     &quot;party&quot;: &quot;示例网站&quot;,
     &quot;description&quot;: &quot;购买道具&quot;,
     &quot;password&quot;: &quot;账户密码&quot;
+}
+</code></pre>
+    <p>收款就不用带 <code>password</code>：</p>
+    <pre><code class="language-json">{
+    &quot;type&quot;: &quot;receipt&quot;,
+    &quot;amount&quot;: &quot;5.00&quot;,
+    &quot;party&quot;: &quot;官方福利&quot;,
+    &quot;description&quot;: &quot;每日签到&quot;
 }
 </code></pre>
     <p>也可用显式账户路径（<code>{登录名}</code> 必须是自己）：</p>
@@ -587,8 +599,8 @@ content-type: application/json
     </tr>
     <tr>
     <td><code>password</code></td>
-    <td>是</td>
-    <td>当前账户的登录密码</td>
+    <td>仅付款</td>
+    <td>付款时必填，必须等于当前账户的登录密码；收款忽略此项</td>
     </tr>
     </tbody>
     </table>
@@ -647,7 +659,7 @@ content-type: application/json
     <tbody>
     <tr>
     <td>密码</td>
-    <td>必须与账户当前密码一致，否则 <code>400 invalid_password</code>（不会产生记录）</td>
+    <td><code>payment</code> 必须与账户当前密码一致，否则 <code>400 invalid_password</code>（不会产生记录）；<code>receipt</code> 不校验密码</td>
     </tr>
     <tr>
     <td>余额</td>
@@ -692,7 +704,7 @@ content-type: application/json
     <tr>
     <td>400</td>
     <td><code>invalid_password</code></td>
-    <td>记账时密码不正确</td>
+    <td>付款时密码不正确</td>
     </tr>
     <tr>
     <td>400</td>
@@ -843,15 +855,15 @@ content-type: application/json
     </tr>
     <tr>
     <td><code>VTX.pay({ amount, party, description, password })</code></td>
-    <td>记一笔付款（扣余额）</td>
+    <td>记一笔付款（扣余额），<code>password</code> 必填</td>
     </tr>
     <tr>
-    <td><code>VTX.receive({ amount, party, description, password })</code></td>
-    <td>记一笔收款（加余额）</td>
+    <td><code>VTX.receive({ amount, party, description })</code></td>
+    <td>记一笔收款（加余额），<strong>不需要密码</strong></td>
     </tr>
     <tr>
     <td><code>VTX.trade({ type, amount, party, description, name, password })</code></td>
-    <td>上面两个的通用形式</td>
+    <td>上面两个的通用形式（<code>payment</code> 才需要 <code>password</code>）</td>
     </tr>
     <tr>
     <td><code>VTX.getToken()</code></td>
@@ -905,7 +917,7 @@ const paid = await VTX.pay({
 console.log(paid.trade.price, paid.account.money);   // -12.34  87.66
 
 // 收款 5.00 VTX 来自某个网站
-await VTX.receive({ amount: &quot;5.00&quot;, party: &quot;游戏站&quot;, password: &quot;账户密码&quot; });
+await VTX.receive({ amount: &quot;5.00&quot;, party: &quot;游戏站&quot;, description: &quot;签到奖励&quot; });
 </code></pre>
     <hr>
     <h2 id="9. 登录页（API_LOGIN.html）">9. 登录页（API_LOGIN.html）</h2>
@@ -1038,7 +1050,7 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     <p><strong>流程</strong></p>
     <ol>
     <li>已有有效 token 时调 <code>GET /api/me</code> 自动登录，否则显示登录表单</li>
-    <li>选择「付款 / 收款」，填对方、金额、描述（选填）、<strong>密码</strong></li>
+    <li>选择「付款 / 收款」，填对方、金额、描述（选填）；<strong>付款才需要再输一次密码</strong>，收款直接点「确认收款」到账</li>
     <li>提交后页面展示记录详情（名称 / 金额 / 流向 / 描述 / 时间）与最新余额</li>
     </ol>
     <p>站内也可用 iframe 嵌它，把 <code>type=payment</code> 直接落到付款页签：</p>
