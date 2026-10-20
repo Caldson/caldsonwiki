@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>5.2.0</code>（新增收款码；收款不需要密码；<code>data</code> 按游戏名分区，见第 3.1 节）</li>
+    <li>API 版本：<code>6.0.0</code>（接口与 5.2.0 一致；新增商店、管理员仓库修改器与聊天室页面，见第 9.2 节）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -1208,6 +1208,86 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     <pre><code class="language-html">&lt;iframe src=&quot;https://xsmmc.caldson.us.ci/API_VTXPAY.html?type=payment&quot;
         style=&quot;width:440px;height:640px;border:0&quot;&gt;&lt;/iframe&gt;
 </code></pre>
+    <hr>
+    <h2 id="9.2 商店、管理员工具与聊天室（6.0 新增）">9.2 商店、管理员工具与聊天室（6.0 新增）</h2>
+    <p>以下页面直接使用 <code>secure.json</code> 中保存的 GitHub token 读写仓库（Contents API / Git Data API），<strong>不经过 Worker 接口</strong>，
+    因此 API 端点与 5.2.0 完全一致。</p>
+    <h3 id="9.2.1 商店（shop.html）">9.2.1 商店（shop.html）</h3>
+    <ul>
+    <li>地址：<code>https://xsmmc.caldson.us.ci/shop.html</code>，需要已登录（<code>sessionStorage.vtxAccount</code>）</li>
+    <li>商品数据存放在仓库根目录 <code>shop.json</code>：</li>
+    </ul>
+    <pre><code class="language-json">{
+    &quot;version&quot;: &quot;6.0&quot;,
+    &quot;items&quot;: [
+        {
+            &quot;id&quot;: &quot;vtx-note-10&quot;,
+            &quot;name&quot;: &quot;10 VTX 纸币&quot;,
+            &quot;price&quot;: &quot;10.00&quot;,
+            &quot;description&quot;: &quot;面值 10 VTX 的纸质货币，下单后次日线下领取。&quot;,
+            &quot;manufacturer&quot;: &quot;XRingCR&quot;,
+            &quot;stock&quot;: 100
+        }
+    ]
+}
+</code></pre>
+    <table>
+    <thead>
+    <tr>
+    <th>字段</th>
+    <th>说明</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td><code>id</code></td>
+    <td>商品唯一标识，购买时用于定位商品</td>
+    </tr>
+    <tr>
+    <td><code>name</code></td>
+    <td>商品名称</td>
+    </tr>
+    <tr>
+    <td><code>price</code></td>
+    <td>单价（VTX，字符串）</td>
+    </tr>
+    <tr>
+    <td><code>description</code></td>
+    <td>详情描述</td>
+    </tr>
+    <tr>
+    <td><code>manufacturer</code></td>
+    <td>制造商</td>
+    </tr>
+    <tr>
+    <td><code>stock</code></td>
+    <td>库存数量，由站主填写；<code>stock &gt; 0</code> 自动显示「在售」，否则显示「无货」</td>
+    </tr>
+    </tbody>
+    </table>
+    <ul>
+    <li>购买流程：选择数量 → 输入<strong>账户密码</strong>确认 → 扣款并写入一条 <code>name</code> 为 <code>购买商品</code> 的交易记录</li>
+    <li>购买会在一次提交中同时更新 <code>shop.json</code>（库存减少）与 <code>account.json</code>（余额减少、写入交易记录）</li>
+    <li>成功后页面显示购买凭证，需要截图发到 XRingCR 群，次日线下领取</li>
+    </ul>
+    <h3 id="9.2.2 管理员仓库修改器（admin.html）">9.2.2 管理员仓库修改器（admin.html）</h3>
+    <ul>
+    <li>地址：<code>https://xsmmc.caldson.us.ci/admin.html</code></li>
+    <li>仅当 <code>sessionStorage.vtxAccount === &quot;Kitawaga&quot;</code> 时可访问，其它账户会被重定向到 <code>manager.html</code>；
+    <code>manager.html</code> 顶部也只在该账户登录时显示「管理员仓库修改器」按钮</li>
+    <li>支持：新建 / 删除 / 修改文件，重命名文件（含扩展名），新建 / 删除 / 重命名文件夹，
+    fetch、pull、fetch and pull、push、自己处理 merge、让 AI 处理 merge、让 AI 写代码，
+    以及 push 前编辑 commit 名称与详情、push 后修改最近一次提交的名称与详情</li>
+    <li>「让 AI 处理 merge」与「让 AI 写代码」使用 <code>https://text.pollinations.ai/openai</code>（依次尝试 <code>openai-fast</code>、<code>openai</code>、<code>mistral</code>）</li>
+    <li>空文件夹通过 <code>.gitkeep</code> 占位，Git 本身不保存空目录</li>
+    </ul>
+    <h3 id="9.2.3 聊天室（chatroom.html）">9.2.3 聊天室（chatroom.html）</h3>
+    <ul>
+    <li>地址：<code>https://xsmmc.caldson.us.ci/chatroom.html</code></li>
+    <li>6.0 版本仅显示「功能开发中，敬请期待。」</li>
+    </ul>
+    <h3 id="9.2.4 提款与转账的密码确认（6.0 变更）">9.2.4 提款与转账的密码确认（6.0 变更）</h3>
+    <p><code>manager.html</code> 中的「提款」与「转账」在提交前必须输入当前账户密码，密码错误则不写入仓库。</p>
     <hr>
     <h2 id="10. 服务端配置">10. 服务端配置</h2>
     <p><code>worker/wrangler.toml</code>：</p>
