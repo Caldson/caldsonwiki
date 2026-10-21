@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>6.1.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，见第 9.2 节）</li>
+    <li>API 版本：<code>6.2.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，见第 9.2 节）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -1215,11 +1215,12 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     <h3 id="9.2.1 商店（shop.html）">9.2.1 商店（shop.html）</h3>
     <ul>
     <li>地址：<code>https://xsmmc.caldson.us.ci/shop.html</code>，需要已登录（<code>sessionStorage.vtxAccount</code>）</li>
-    <li>商品数据存放在仓库根目录 <code>shop.json</code>：</li>
+    <li>商品数据存放在仓库根目录 <code>shop.json</code>，<strong>按分类分组</strong>：<code>items</code> 键放未分类商品，其它键名即分类名，值为该分类的商品数组：</li>
     </ul>
     <pre><code class="language-json">{
-    &quot;version&quot;: &quot;6.1&quot;,
-    &quot;items&quot;: [
+    &quot;version&quot;: &quot;6.2&quot;,
+    &quot;items&quot;: [],
+    &quot;文具本 - 采用冷胶工艺&quot;: [
         {
             &quot;id&quot;: &quot;xring-backend-blankbook-pocketver&quot;,
             &quot;name&quot;: &quot;[返场] [返场专属口袋版] 空白本&quot;,
@@ -1231,9 +1232,11 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     ]
 }
 </code></pre>
-    <blockquote>
-    <p><code>shop.json</code> 中的 <code>version</code> 与商品列表由站主自行维护，页面不会限制条数；当前数据为 6.1 版本。</p>
-    </blockquote>
+    <ul>
+    <li>页面顶部会按数据自动生成分栏：<strong>全部</strong>、<strong>未分类</strong>、（每个自定义分类），每个分栏后显示商品数量；「全部」视图会在卡片上标出该商品的分类</li>
+    <li>兼容旧格式：<code>shop.json</code> 直接是商品数组（6.1 及更早）时，所有商品都算「未分类」；也可以改用 <code>未分类</code> 作为键名</li>
+    <li>单个商品也可以加 <code>&quot;category&quot;: &quot;分类名&quot;</code> 覆盖它所在分组的名字</li>
+    </ul>
     <table>
     <thead>
     <tr>
@@ -1244,7 +1247,7 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     <tbody>
     <tr>
     <td><code>id</code></td>
-    <td>商品唯一标识，购买时用于定位商品</td>
+    <td>商品唯一标识（全局不要重复），购买时用于定位商品</td>
     </tr>
     <tr>
     <td><code>name</code></td>
@@ -1266,11 +1269,15 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     <td><code>stock</code></td>
     <td>库存数量，由站主填写；<code>stock &gt; 0</code> 自动显示「在售」，否则显示「无货」</td>
     </tr>
+    <tr>
+    <td><code>category</code></td>
+    <td>选填，覆盖分组名</td>
+    </tr>
     </tbody>
     </table>
     <ul>
     <li>购买流程：选择数量 → 输入<strong>账户密码</strong>确认 → 扣款并写入一条 <code>name</code> 为 <code>购买商品</code> 的交易记录</li>
-    <li>购买会在一次提交中同时更新 <code>shop.json</code>（库存减少）与 <code>account.json</code>（余额减少、写入交易记录）</li>
+    <li>购买会在一次提交中同时更新 <code>shop.json</code>（原分类内库存减少）与 <code>account.json</code>（余额减少、写入交易记录）</li>
     <li>成功后页面显示购买凭证，需要截图发到 XRingCR 群，次日线下领取</li>
     </ul>
     <h3 id="9.2.2 管理员仓库修改器（admin.html）">9.2.2 管理员仓库修改器（admin.html）</h3>
