@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>1.0.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；<strong>1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节</strong>）</li>
+    <li>API 版本：<code>1.3.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -1727,6 +1727,31 @@ curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/r
     <li>分配用「二倍均值法」，保证剩下的人每人至少 0.01 元；24 小时有效，未被抢完的金额发送者可随时退回</li>
     <li>消息类型 <code>redpacket</code>，<code>message.packet</code> 带 <code>totalCents / remainCents / count / allow / grabs[] / closed</code>，抢到后广播 <code>message:packet</code></li>
     </ul>
+    <hr>
+    <h2 id="14. 1.2.0 安全修复补丁">14. 1.2.0 安全修复补丁</h2>
+    <p>这一版只做安全修复，没有新增业务功能。完整说明见 <a href="https://xsmmc.caldson.us.ci/API-docs.md">API-docs.md</a> 第 15 节。</p>
+    <ul>
+    <li>删除 <code>secure.json</code> / <code>crypto.html</code> / <code>vtx-crypto.js</code>；浏览器直连 GitHub 改账户数据的备用通道停用，仓库 Token 改为管理员临时输入（只存在当前标签页）</li>
+    <li><code>?api=</code> 不再能改写 API 地址：只接受同源地址或内置白名单</li>
+    <li>聊天附件只允许 png/jpeg/gif/webp 内联显示，其余按 <code>attachment</code> 下载（防同源存储型 XSS）</li>
+    <li>密码改为 PBKDF2-SHA256 哈希（10 万次迭代 + 每账户独立盐），旧明文密码在首次登录成功后就地升级；<code>/api/admin/accounts</code> 只返回 <code>hasPassword</code></li>
+    <li><code>POST /api/me/purchase</code> 的价格与库存改由服务端按 <code>shop.json</code> 决定，忽略客户端 <code>amount</code>；新增 <code>GET /api/shop</code></li>
+    <li>余额写入增加 Durable Object <code>AccountsLock</code> 跨 isolate 写锁</li>
+    <li>邀请码改用 <code>crypto.getRandomValues()</code>，邀请 / 群号加入接口按 IP 限流 10 次/分钟</li>
+    <li>管理员登录名不可被注册或改名占用（<code>409 account_reserved</code>）</li>
+    </ul>
+
+    <hr>
+    <h2 id="15. 1.3.0 修复已知问题">15. 1.3.0 修复已知问题</h2>
+    <p>本版只改前端，Worker 接口没有任何变化。对应 <a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2 聊天室 overflow 问题</a>。</p>
+    <ul>
+    <li><code>chatroom.html</code> 的 <code>.app</code> 高度由 <code>100vh</code> 改为 <code>100dvh</code>，并由脚本用 <code>visualViewport.height</code> 写成内联高度：iPad / iPhone 上不再因为「<code>100vh</code> 是工具栏收起后的大视口」把输入框顶到屏幕外</li>
+    <li>消息列表、会话列表、弹窗内容区补 <code>min-height: 0</code> 与 <code>overscroll-behavior: contain</code>，消息再多也只有消息列表滚动</li>
+    <li>消息列表加常驻细滚动条（桌面）；iPadOS 仍是系统浮层滚动条，滚动时出现</li>
+    <li>触摸设备上 <code>input</code> / <code>textarea</code> / <code>select</code> 统一 16px，避免 iOS 聚焦时自动放大页面导致排版错位</li>
+    <li>顶栏、输入区、左侧导航适配 <code>env(safe-area-inset-*)</code></li>
+    </ul>
+    <p>版本号同步：<code>vtx-api.js</code> 的 <code>API_VERSION</code>、<code>chatroom.html</code> 的 <code>REQUIRED_API_VERSION</code>、各页面 <code>?v=</code>、Worker 的 <code>VERSION</code> / <code>CHAT_VERSION</code> 均为 <code>1.3.0</code>（<code>CHAT_VERSION</code> 为 <code>1.3</code>）。</p>
     <script src="../../dsh-ui.js"></script>
 </body>
 </html>
