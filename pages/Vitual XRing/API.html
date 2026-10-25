@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>9.0.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；<strong>9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送），见第 12 节</strong>）</li>
+    <li>API 版本：<code>9.1.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；<strong>9.1 新增解散群聊（解散后只读保留历史消息），见第 12 节</strong>）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -1301,12 +1301,14 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     <ul>
     <li>地址：<code>https://xsmmc.caldson.us.ci/chatroom.html</code></li>
     <li>9.0 起为完整聊天室：左侧会话列表 / 通讯录 / 站主管理，右侧聊天窗口</li>
-    <li>支持单聊、群聊、创建群、修改群名、群公告与置顶群公告、群主 / 管理员 / 转让 / 踢人 / 解散、
+    <li>支持单聊、群聊、创建群、修改群名、群公告与置顶群公告、群主 / 管理员 / 转让 / 踢人、
+    解散群聊（9.1：解散后只读保留历史消息）、
     好友申请与黑名单、消息撤回、引用回复、转发、聊天记录搜索、会话置顶、消息免打扰、未读数、
     正在输入提示、在线状态、图片 / 文件消息</li>
     <li>实时消息通过 Durable Object <code>ChatHub</code> 的 WebSocket 推送；连接失败时自动降级为 7 秒轮询</li>
     <li>图片 / 文件上传后只保留 20 分钟，过期后聊天记录仍在，但显示「已过期」</li>
-    <li>站主（<code>ADMIN_ACCOUNT</code>，默认 <code>Kitawaga</code>）可以在「管理」页查看、删除全部群聊与单聊的消息</li>
+    <li>站主（<code>ADMIN_ACCOUNT</code>，默认 <code>Kitawaga</code>）可以在「管理」页查看、删除全部群聊与单聊的消息，
+    也可以解散任意群聊（只读保留记录）</li>
     <li>接口细节见第 12 节</li>
     </ul>
     <h3 id="9.2.4 提款与转账的密码确认（6.0 变更）">9.2.4 提款与转账的密码确认（6.0 变更）</h3>
@@ -1417,9 +1419,11 @@ npx wrangler dev                  # 默认 http://127.0.0.1:8787
       这将使本 API 的鉴权失去意义。建议后续改为 PBKDF2 哈希存储。</li>
     </ul>
     <hr>
-    <h2 id="12. 9.0 更新：完整聊天室">12. 9.0 更新：完整聊天室</h2>
+    <h2 id="12. 9.0 更新：完整聊天室">12. 9.0 更新：完整聊天室（9.1 新增解散群聊）</h2>
     <p>聊天记录、好友关系、群资料全部存在 Workers KV；实时消息由 Durable Object <code>ChatHub</code> 通过 WebSocket 广播。
     <code>CHAT_ENABLED=true</code>（9.0 默认）时所有聊天接口可用。</p>
+    <p>9.1 起支持「解散群聊」：群主或站主解散后，群聊变成只读历史（<code>dissolved: true</code>），
+    成员仍可查看聊天记录，但不能发言或修改群资料。</p>
 
     <h3 id="12.1 绑定与开关">12.1 绑定与开关</h3>
     <pre><code class="language-toml"># wrangler.toml
@@ -1464,14 +1468,14 @@ new_sqlite_classes = ["ChatHub"]
     <tr><td><code>POST /api/chat/conversations/group</code></td><td>是</td><td>创建群聊</td></tr>
     <tr><td><code>GET /api/chat/conversations/{id}</code></td><td>是</td><td>会话详情与成员列表</td></tr>
     <tr><td><code>PATCH /api/chat/conversations/{id}</code></td><td>是</td><td>修改群名（群主 / 管理员 / 站主）</td></tr>
-    <tr><td><code>DELETE /api/chat/conversations/{id}</code></td><td>是</td><td>删除单聊或解散群聊</td></tr>
+    <tr><td><code>DELETE /api/chat/conversations/{id}</code></td><td>是</td><td>删除单聊，或解散群聊（9.1：只读保留历史消息）</td></tr>
     <tr><td><code>GET /api/chat/conversations/{id}/messages</code></td><td>是</td><td>读取消息（<code>before</code> 分页）</td></tr>
     <tr><td><code>POST /api/chat/conversations/{id}/messages</code></td><td>是</td><td>发送文字 / 图片 / 文件，支持引用与 @</td></tr>
     <tr><td><code>POST /api/chat/conversations/{id}/read</code></td><td>是</td><td>标记已读</td></tr>
     <tr><td><code>POST /api/chat/conversations/{id}/typing</code></td><td>是</td><td>正在输入提示</td></tr>
     <tr><td><code>POST /api/chat/conversations/{id}/settings</code></td><td>是</td><td>置顶 / 免打扰</td></tr>
     <tr><td><code>POST /api/chat/conversations/{id}/clear</code></td><td>是</td><td>清空自己的聊天记录</td></tr>
-    <tr><td><code>POST /api/chat/conversations/{id}/leave</code></td><td>是</td><td>退出群聊 / 公共频道</td></tr>
+    <tr><td><code>POST /api/chat/conversations/{id}/leave</code></td><td>是</td><td>退出群聊 / 公共频道；已解散的群聊等于删除自己的只读会话</td></tr>
     <tr><td><code>POST /api/chat/conversations/{id}/join</code></td><td>是</td><td>重新加入公共频道</td></tr>
     <tr><td><code>POST /api/chat/conversations/{id}/members</code></td><td>是</td><td>邀请成员进群</td></tr>
     <tr><td><code>DELETE /api/chat/conversations/{id}/members/{登录名}</code></td><td>是</td><td>移出成员（群主 / 管理员 / 站主）</td></tr>
@@ -1548,7 +1552,8 @@ socket.send(JSON.stringify({ type: "ping" }));
 </code></pre>
     <p>事件类型：<code>hello</code>、<code>presence</code>、<code>message</code>、<code>message:recall</code>、
     <code>message:delete</code>、<code>conversation:new</code>、<code>conversation:update</code>、
-    <code>conversation:remove</code>、<code>typing</code>、<code>friend:request</code>、<code>friend:accept</code>、
+    <code>conversation:dissolved</code>（9.1 群聊被解散，前端改为标记只读）、<code>conversation:remove</code>、
+    <code>typing</code>、<code>friend:request</code>、<code>friend:accept</code>、
     <code>friend:decline</code>、<code>friend:remove</code>、<code>pong</code>。
     未绑定 <code>CHAT</code> 时 <code>/api/chat/ws</code> 返回 <code>503 chat_ws_unavailable</code>，前端自动改用轮询。</p>
 
@@ -1556,7 +1561,8 @@ socket.send(JSON.stringify({ type: "ping" }));
     <ul>
     <li>发送消息：每个 IP 60 秒 30 条；上传媒体：60 秒 12 次；正在输入：每个 IP + 会话 60 秒 120 次</li>
     <li><code>400 bad_request</code>、<code>401 unauthorized</code>、<code>403 blocked / not_friend / forbidden</code>、
-    <code>404 not_found</code>、<code>410 media_expired</code>、<code>413 payload_too_large</code>、
+    <code>404 not_found</code>、<code>410 media_expired</code>、<code>410 group_dissolved</code>（9.1 群聊已解散，只读）、
+    <code>413 payload_too_large</code>、
     <code>429 too_many_requests</code>、<code>503 chat_not_ready</code> / <code>chat_ws_unavailable</code></li>
     </ul>
 
