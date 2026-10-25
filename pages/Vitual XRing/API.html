@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>1.4.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消面对面加群限流，见第 16 节</strong>）</li>
+    <li>API 版本：<code>1.4.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消聊天室全部限流，见第 16 节</strong>）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -1754,7 +1754,7 @@ curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/r
     <p>版本号同步：<code>vtx-api.js</code> 的 <code>API_VERSION</code>、<code>chatroom.html</code> 的 <code>REQUIRED_API_VERSION</code>、各页面 <code>?v=</code>、Worker 的 <code>VERSION</code> / <code>CHAT_VERSION</code> 均为 <code>1.3.0</code>（<code>CHAT_VERSION</code> 为 <code>1.3</code>）。</p>
 
     <hr>
-    <h2 id="16. 1.4.0 更新">16. 1.4.0 更新：自动登录、可查看的账户密码、面对面加群去限流</h2>
+    <h2 id="16. 1.4.0 更新">16. 1.4.0 更新：自动登录、可查看的账户密码、聊天室去限流</h2>
     <ul>
     <li><strong>登录页恢复自动登录</strong>：登录 / 注册成功后 <code>localStorage.vtxRemembered</code> 保存 <code>{ login, password }</code>，
         再次打开 <code>login.html</code> 会直接调 <code>POST /api/login</code> 并跳到 <code>?next=</code> 指定页面；
@@ -1764,8 +1764,15 @@ curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/r
         <code>GET /api/admin/accounts</code> 等管理员接口返回解密后的 <code>password</code>，
         其它接口（含 <code>GET /api/accounts</code>）不返回。<code>accounts-admin.html</code> 的编辑面板新增
         「当前密码」与「显示 / 隐藏」按钮。未配置 <code>PASSWORD_VIEW_KEY</code> 或该账户还没在 1.4.0 后登录过时为 <code>null</code>。</li>
-    <li><strong>面对面加群不再限流</strong>：删除 4 / 8 位邀请码查询、加入与 8 位群号加入的
-        「每 IP 60 秒 10 次」限制（连同 <code>inviteAttempts</code> 计数器）；其它限流保持不变。</li>
+    <li><strong>聊天室全部取消限流</strong>：
+        <ul>
+        <li>面对面加群：删除 4 / 8 位邀请码查询、加入与 8 位群号加入的「每 IP 60 秒 10 次」限制（连同 <code>inviteAttempts</code> 计数器）；</li>
+        <li>发言 <code>POST /api/chat/conversations/{id}/messages</code>：原每 IP 60 秒 30 条 → 不再限制；</li>
+        <li>正在输入 <code>POST /api/chat/conversations/{id}/typing</code>：原每 IP + 会话 60 秒 120 次（超了返回 <code>throttled: true</code>）→ 不再限制；</li>
+        <li>上传媒体 <code>POST /api/chat/media</code>：原每 IP 60 秒 12 次 → 不再限制；</li>
+        <li>删除 <code>CHAT_*_WINDOW_MS</code> / <code>CHAT_*_MAX_ATTEMPTS</code> 常量与 <code>chatAttempts</code> / <code>chatMediaAttempts</code> / <code>chatTypingAttempts</code> 计数器；
+            登录、注册、写入、记账、管理操作的限流与聊天室无关，保持不变。</li>
+        </ul></li>
     </ul>
     <p>部署：<code>cd worker &amp;&amp; npx wrangler secret put PASSWORD_VIEW_KEY</code>（任意足够长的随机字符串），
     然后 <code>npx wrangler deploy</code>。版本号同步到 <code>1.4.0</code>（<code>CHAT_VERSION</code> 为 <code>1.4</code>）。</p>
