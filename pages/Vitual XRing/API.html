@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>9.1.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；<strong>9.1 新增解散群聊（解散后只读保留历史消息），见第 12 节</strong>）</li>
+    <li>API 版本：<code>9.2.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；<strong>9.2 站主可以新增、改名、解散公共频道，见第 12 节</strong>）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -1453,6 +1453,7 @@ new_sqlite_classes = ["ChatHub"]
     <tr><td><code>chat:direct:{A}|{B}</code></td><td>单聊去重：两个登录名 → 会话 id</td></tr>
     <tr><td><code>chat:media:{id}</code> / <code>chat:media-meta:{id}</code></td><td>图片 / 文件与元数据，<code>expirationTtl = 1200</code>（20 分钟）</td></tr>
     <tr><td><code>chat:index</code></td><td>全部会话 id（站主管理页使用，最多 2000 个）</td></tr>
+    <tr><td><code>chat:public-groups</code></td><td>公共频道定义（9.2）：<code>[{ id, name, description, createdAt }]</code>，缺失时使用内置默认值</td></tr>
     </tbody>
     </table>
     <p>会话 id：公共频道为 <code>general</code> / <code>trade</code> / <code>help</code>；群聊 <code>g_xxxxxxxxxxxx</code>；单聊 <code>dm_xxxxxxxxxxxx</code>。</p>
@@ -1500,6 +1501,10 @@ new_sqlite_classes = ["ChatHub"]
     <tr><td><code>GET /api/chat/admin/conversations/{id}/messages</code></td><td>站主</td><td>任意会话消息</td></tr>
     <tr><td><code>DELETE /api/chat/admin/messages/{id}</code></td><td>站主</td><td>永久删除任意消息</td></tr>
     <tr><td><code>DELETE /api/chat/admin/conversations/{id}</code></td><td>站主</td><td>永久删除任意会话</td></tr>
+    <tr><td><code>GET /api/chat/admin/public-groups</code></td><td>站主</td><td>公共频道列表（9.2）</td></tr>
+    <tr><td><code>POST /api/chat/admin/public-groups</code></td><td>站主</td><td>新建公共频道（9.2）</td></tr>
+    <tr><td><code>PATCH /api/chat/admin/public-groups/{id}</code></td><td>站主</td><td>修改频道名称 / 简介（9.2）</td></tr>
+    <tr><td><code>DELETE /api/chat/admin/public-groups/{id}</code></td><td>站主</td><td>解散公共频道（9.2）</td></tr>
     <tr><td><code>GET /api/chat/messages?room=general</code> / <code>POST /api/chat/messages</code></td><td>是</td><td>8.0 旧接口，兼容公共频道</td></tr>
     </tbody>
     </table>
@@ -1566,7 +1571,36 @@ socket.send(JSON.stringify({ type: "ping" }));
     <code>429 too_many_requests</code>、<code>503 chat_not_ready</code> / <code>chat_ws_unavailable</code></li>
     </ul>
 
-    <h3 id="12.7 消息结构">12.7 消息结构</h3>
+    <h3 id="12.7 公共频道管理（9.2，仅站主）">12.7 公共频道管理（9.2，仅站主）</h3>
+    <p>公共频道列表存在 KV 的 <code>chat:public-groups</code>，首次访问时若不存在则使用内置的
+    <code>general</code> / <code>trade</code> / <code>help</code>。</p>
+    <pre><code class="language-bash"># 列出全部公共频道
+curl https://xsmmc.caldson.us.ci/api/chat/admin/public-groups -H "authorization: ******"
+
+# 新建（id 可省略，自动生成 ch_xxxxxxxx）
+curl -X POST https://xsmmc.caldson.us.ci/api/chat/admin/public-groups \
+  -H "authorization: ******" -H "content-type: application/json" \
+  -d '{"name":"活动","description":"每周活动公告","id":"event"}'
+
+# 改名 / 改简介
+curl -X PATCH https://xsmmc.caldson.us.ci/api/chat/admin/public-groups/event \
+  -H "authorization: ******" -H "content-type: application/json" \
+  -d '{"name":"活动大厅","description":"每周活动与公告"}'
+
+# 解散（删除频道及全部消息，并从所有账户会话列表移除）
+curl -X DELETE https://xsmmc.caldson.us.ci/api/chat/admin/public-groups/event \
+  -H "authorization: ******"
+</code></pre>
+    <ul>
+    <li>只有站主（<code>ADMIN_ACCOUNT</code>）可以调用，其他人返回 <code>403 forbidden</code></li>
+    <li>新建后所有账户的会话列表立刻出现该频道（广播 <code>conversation:new</code>）</li>
+    <li>改名会同步频道定义与会话资料并写入系统消息（广播 <code>conversation:update</code>）</li>
+    <li>解散会广播 <code>conversation:remove</code>，并从所有账户会话列表移除</li>
+    <li>至少保留一个公共频道：删除最后一个返回 <code>400 bad_request</code></li>
+    <li>站主也可以用 <code>PATCH /api/chat/conversations/{id}</code> 改名、<code>DELETE /api/chat/conversations/{id}</code> 解散公共频道</li>
+    </ul>
+
+    <h3 id="12.8 消息结构">12.8 消息结构</h3>
     <pre><code class="language-json">{
     "id": "xxxxxxxxxxxx",
     "conversation": "dm_xxxxxxxxxxxx",
