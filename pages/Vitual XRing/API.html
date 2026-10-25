@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>9.3.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；<strong>9.3 修复前端脚本被缓存导致的 <code>is not a function</code>，见第 12 节</strong>）</li>
+    <li>API 版本：<code>1.0.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；<strong>1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节</strong>）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -1303,6 +1303,7 @@ https://xsmmc.caldson.us.ci/API_LOGIN.html?tab=register
     <li>9.0 起为完整聊天室：左侧会话列表 / 通讯录 / 站主管理，右侧聊天窗口</li>
     <li>支持单聊、群聊、创建群、修改群名、群公告与置顶群公告、群主 / 管理员 / 转让 / 踢人、
     解散群聊（9.1：解散后只读保留历史消息）、
+    公共频道管理（9.2）、账号 UID 与按 UID 搜人、群号与群二维码、4 / 8 位邀请码建群、拼手速红包（1.0.0）、
     好友申请与黑名单、消息撤回、引用回复、转发、聊天记录搜索、会话置顶、消息免打扰、未读数、
     正在输入提示、在线状态、图片 / 文件消息</li>
     <li>实时消息通过 Durable Object <code>ChatHub</code> 的 WebSocket 推送；连接失败时自动降级为 7 秒轮询</li>
@@ -1454,6 +1455,7 @@ new_sqlite_classes = ["ChatHub"]
     <tr><td><code>chat:media:{id}</code> / <code>chat:media-meta:{id}</code></td><td>图片 / 文件与元数据，<code>expirationTtl = 1200</code>（20 分钟）</td></tr>
     <tr><td><code>chat:index</code></td><td>全部会话 id（站主管理页使用，最多 2000 个）</td></tr>
     <tr><td><code>chat:public-groups</code></td><td>公共频道定义（9.2）：<code>[{ id, name, description, createdAt }]</code>，缺失时使用内置默认值</td></tr>
+    <tr><td><code>chat:invite:{code}</code> / <code>chat:invite-owner:{登录名}</code></td><td>建群邀请（1.0.0），24 小时过期</td></tr>
     </tbody>
     </table>
     <p>会话 id：公共频道为 <code>general</code> / <code>trade</code> / <code>help</code>；群聊 <code>g_xxxxxxxxxxxx</code>；单聊 <code>dm_xxxxxxxxxxxx</code>。</p>
@@ -1505,6 +1507,19 @@ new_sqlite_classes = ["ChatHub"]
     <tr><td><code>POST /api/chat/admin/public-groups</code></td><td>站主</td><td>新建公共频道（9.2）</td></tr>
     <tr><td><code>PATCH /api/chat/admin/public-groups/{id}</code></td><td>站主</td><td>修改频道名称 / 简介（9.2）</td></tr>
     <tr><td><code>DELETE /api/chat/admin/public-groups/{id}</code></td><td>站主</td><td>解散公共频道（9.2）</td></tr>
+    <tr><td><code>GET /api/chat/users/uid/{uid}</code></td><td>是</td><td>按 UID 精确查号（1.0.0）</td></tr>
+    <tr><td><code>GET /api/chat/groups/lookup</code></td><td>是</td><td>按群号查群（1.0.0）</td></tr>
+    <tr><td><code>POST /api/chat/groups/join</code></td><td>是</td><td>按群号加入群聊（1.0.0）</td></tr>
+    <tr><td><code>GET /api/chat/invites/current</code></td><td>是</td><td>我进行中的建群邀请（1.0.0）</td></tr>
+    <tr><td><code>POST /api/chat/invites</code></td><td>是</td><td>发起 4 / 8 位邀请码（1.0.0）</td></tr>
+    <tr><td><code>GET /api/chat/invites/{code}</code></td><td>是</td><td>邀请详情（1.0.0）</td></tr>
+    <tr><td><code>POST /api/chat/invites/{code}/join</code> / <code>…/leave</code></td><td>是</td><td>参加 / 退出邀请（1.0.0）</td></tr>
+    <tr><td><code>POST /api/chat/invites/{code}/close</code></td><td>发起人</td><td>结束邀请并建群（1.0.0）</td></tr>
+    <tr><td><code>DELETE /api/chat/invites/{code}</code></td><td>发起人</td><td>取消邀请（1.0.0）</td></tr>
+    <tr><td><code>POST /api/chat/conversations/{id}/redpackets</code></td><td>是</td><td>群聊里发拼手速红包（1.0.0）</td></tr>
+    <tr><td><code>POST /api/chat/messages/{id}/redpacket/grab</code></td><td>是</td><td>抢红包（1.0.0）</td></tr>
+    <tr><td><code>GET /api/chat/messages/{id}/redpacket</code></td><td>是</td><td>红包详情（1.0.0）</td></tr>
+    <tr><td><code>POST /api/chat/messages/{id}/redpacket/refund</code></td><td>发送者</td><td>退回未抢完金额（1.0.0）</td></tr>
     <tr><td><code>GET /api/chat/messages?room=general</code> / <code>POST /api/chat/messages</code></td><td>是</td><td>8.0 旧接口，兼容公共频道</td></tr>
     </tbody>
     </table>
@@ -1605,7 +1620,7 @@ curl -X DELETE https://xsmmc.caldson.us.ci/api/chat/admin/public-groups/event \
     GitHub Pages 与浏览器会长期缓存这个 URL，于是页面在 9.2 上线后仍在用 9.1 的 SDK，
     点「解散公共频道」直接抛 <code>api.chat.removePublicGroup is not a function</code>。</p>
     <ul>
-    <li>全站脚本引用统一带版本参数（如 <code>vtx-api.js?v=9.3</code>），发布新版本时必须一起改</li>
+    <li>全站脚本引用统一带版本参数（如 <code>vtx-api.js?v=1.0.0</code>），发布新版本时必须一起改</li>
     <li><code>chatroom.html</code> 启动时校验 <code>VTXApi.version</code>：低于 <code>REQUIRED_API_VERSION</code> 会自动
     <code>vtx-api.js?v=&lt;版本&gt;&amp;t=&lt;时间戳&gt;</code> 重新加载一次；仍不达标则显示「页面资源需要更新」提示页与「重新加载」按钮</li>
     <li><code>report()</code> 遇到 <code>is not a function</code> 会提示「请按 Ctrl+F5 刷新」</li>
@@ -1617,8 +1632,7 @@ curl -X DELETE https://xsmmc.caldson.us.ci/api/chat/admin/public-groups/event \
     <pre><code class="language-json">{
     "id": "xxxxxxxxxxxx",
     "conversation": "dm_xxxxxxxxxxxx",
-    "sender": "Alice",
-    "senderName": "爱丽丝",
+    "sender": "Alice",    "senderName": "爱丽丝",
     "type": "text",
     "text": "你好",
     "media": null,
@@ -1631,6 +1645,88 @@ curl -X DELETE https://xsmmc.caldson.us.ci/api/chat/admin/public-groups/event \
     "time": "2026/10/25 12:00:00"
 }
 </code></pre>
+
+    <h2 id="13. 1.0.0 更新：UID、群号、邀请码与红包">13. 1.0.0 更新：UID、群号、邀请码与红包</h2>
+
+    <h3 id="13.1 账号 UID">13.1 账号 UID</h3>
+    <p>每个账户有稳定的数字 UID，注册时从 <code>100001</code> 顺序分配，老账户在首次调用
+    <code>/api/me</code> 或 <code>/api/chat/users</code> 时自动补号。</p>
+    <pre><code class="language-bash"># 自己的 UID（account.uid）
+curl https://xsmmc.caldson.us.ci/api/me -H "authorization: ******"
+
+# 按 UID 精确查号
+curl https://xsmmc.caldson.us.ci/api/chat/users/uid/100001 -H "authorization: ******"
+
+# 搜索框也支持 UID
+curl "https://xsmmc.caldson.us.ci/api/chat/users?q=100001" -H "authorization: ******"
+</code></pre>
+    <p><code>publicAccount</code>、<code>/api/chat/users</code>、群成员列表都会带上 <code>uid</code>；
+    聊天室左下角显示「用户名 · UID 100001」，点一下复制。</p>
+
+    <h3 id="13.2 群号与群二维码">13.2 群号与群二维码</h3>
+    <pre><code class="language-bash"># 按群号查群
+curl "https://xsmmc.caldson.us.ci/api/chat/groups/lookup?number=12345678" -H "authorization: ******"
+
+# 按群号加入
+curl -X POST https://xsmmc.caldson.us.ci/api/chat/groups/join \
+  -H "authorization: ******" -H "content-type: application/json" -d '{"number":12345678}'
+</code></pre>
+    <ul>
+    <li>群聊创建时分配 8 位随机群号（<code>no</code>），老群打开群资料时补号</li>
+    <li>群二维码内容：<code>https://&lt;站点&gt;/chatroom.html?group=&lt;群号&gt;</code>，
+    前端用 <code>vtx-qr.js</code> 绘制，扫开链接会提示加入</li>
+    <li>群资料里显示群号 +「复制群号」「群二维码」</li>
+    </ul>
+
+    <h3 id="13.3 4 / 8 位数字建群邀请码">13.3 4 / 8 位数字建群邀请码</h3>
+    <pre><code class="language-bash"># 发起邀请（digits 只接受 4 或 8）
+curl -X POST https://xsmmc.caldson.us.ci/api/chat/invites \
+  -H "authorization: ******" -H "content-type: application/json" -d '{"digits":4,"name":"周末开黑"}'
+
+# 我进行中的邀请
+curl https://xsmmc.caldson.us.ci/api/chat/invites/current -H "authorization: ******"
+
+# 查看 / 加入 / 退出
+curl https://xsmmc.caldson.us.ci/api/chat/invites/1234 -H "authorization: ******"
+curl -X POST https://xsmmc.caldson.us.ci/api/chat/invites/1234/join -H "authorization: ******"
+curl -X POST https://xsmmc.caldson.us.ci/api/chat/invites/1234/leave -H "authorization: ******"
+
+# 结束邀请并建群 / 取消邀请（只有发起人）
+curl -X POST https://xsmmc.caldson.us.ci/api/chat/invites/1234/close \
+  -H "authorization: ******" -H "content-type: application/json" -d '{"name":"周末开黑"}'
+curl -X DELETE https://xsmmc.caldson.us.ci/api/chat/invites/1234 -H "authorization: ******"
+</code></pre>
+    <ul>
+    <li>邀请 24 小时过期，KV 键 <code>chat:invite:{code}</code> / <code>chat:invite-owner:{登录名}</code></li>
+    <li>每个账户同时只能有一个进行中的邀请，再发一次自动作废旧的</li>
+    <li>最多 100 人参加；发起人不能加入自己的邀请</li>
+    <li>没有参与者也没填群名时返回 <code>400 no_participants</code></li>
+    <li>实时事件：<code>invite:update</code>（有人加入 / 退出）、<code>invite:closed</code>、<code>invite:cancelled</code></li>
+    </ul>
+
+    <h3 id="13.4 拼手速红包">13.4 拼手速红包</h3>
+    <pre><code class="language-bash"># 发红包：total 元、count 最多几人可抢（0/省略＝所有人）、allow 指定谁可以抢、note 留言
+curl -X POST https://xsmmc.caldson.us.ci/api/chat/conversations/g_xxxx/redpackets \
+  -H "authorization: ******" -H "content-type: application/json" \
+  -d '{"total":"1.00","count":3,"allow":[],"note":"恭喜发财"}'
+
+# 抢红包
+curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/grab?conversation=g_xxxx" \
+  -H "authorization: ******"
+
+# 红包详情 / 退回未抢完金额
+curl "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket?conversation=g_xxxx" -H "authorization: ******"
+curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/refund?conversation=g_xxxx" -H "authorization: ******"
+</code></pre>
+    <ul>
+    <li>只能在群聊（含公共频道）里发，金额从发送者 VTX 余额实扣，抢到的人余额实时增加</li>
+    <li>最小 0.01 元，单个红包上限 200000.00 元</li>
+    <li><strong>每人至少 0.01 元</strong>：<code>total</code> 的分数就是最多能分给的人数，<code>0.02</code> 元最多 2 人，否则 <code>400 bad_request</code></li>
+    <li><code>count</code> 必须 ≤ 群内可抢人数且 ≤ 金额分数；<code>allow</code> 里的人必须都在群里</li>
+    <li>不能抢自己的（<code>403</code>）、只能抢一次（<code>409 already_grabbed</code>）、抢完或过期返回 <code>410</code></li>
+    <li>分配用「二倍均值法」，保证剩下的人每人至少 0.01 元；24 小时有效，未被抢完的金额发送者可随时退回</li>
+    <li>消息类型 <code>redpacket</code>，<code>message.packet</code> 带 <code>totalCents / remainCents / count / allow / grabs[] / closed</code>，抢到后广播 <code>message:packet</code></li>
+    </ul>
     <script src="../../dsh-ui.js"></script>
 </body>
 </html>
