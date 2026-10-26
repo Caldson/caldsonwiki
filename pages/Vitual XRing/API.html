@@ -1789,6 +1789,19 @@ curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/r
     <li>文本先转义再替换，<code>&lt;b&gt;</code> 之类的内容仍按纯文本显示。</li>
     </ul>
     <p>版本号同步到 <code>1.5.0</code>（<code>CHAT_VERSION</code> 为 <code>1.5</code>）；部署 <code>cd worker &amp;&amp; npx wrangler deploy</code>。</p>
+    <h3 id="17.1 停服守卫">17.1 停服守卫（vtx-closed.js + WebsiteClose.html）</h3>
+    <p>停服期间打开站内任何页面都会在渲染前跳到 <code>WebsiteClose.html</code>。版本号仍是 <code>1.5.0</code>，
+        守卫脚本带时间戳加载，改完时间表立刻生效。</p>
+    <ul>
+    <li><code>vtx-closed.js</code>：时间表 <code>WINDOWS</code>（北京时间，<code>["开始","结束"]</code>），
+        命中窗口且不在停服页时 <code>location.replace("WebsiteClose.html?from=&lt;相对路径&gt;")</code>。</li>
+    <li><code>WebsiteClose.html</code>：停服公告页，含倒计时、维护窗口、恢复后「回到刚才的页面」按钮；
+        <code>?from=</code> 只接受站内相对路径（<code>//</code>、<code>scheme:</code>、<code>\</code> 一律丢弃）。</li>
+    <li>引入方式（每个页面 <code>&lt;head&gt;</code> 里 charset 之后）：
+        <code>&lt;script&gt;document.write('&lt;script src="vtx-closed.js?t=' + Date.now() + '"&gt;&lt;\/script&gt;');&lt;/script&gt;</code>，
+        带时间戳可绕开浏览器 / GitHub Pages 的 10 分钟缓存。</li>
+    <li>公告页自身不会循环跳转；脚本加载失败时页面照常可用；禁用 JS 时守卫失效（纯静态站点的已知限制）。</li>
+    </ul>
     <script src="../../dsh-ui.js"></script>
 </body>
 </html>
