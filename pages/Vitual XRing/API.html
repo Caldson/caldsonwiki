@@ -1803,16 +1803,19 @@ curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/r
     <li>公告页自身不会循环跳转；脚本加载失败时页面照常可用；禁用 JS 时守卫失效（纯静态站点的已知限制）。</li>
     </ul>
     <hr>
-    <h2 id="18. 1.6.0 更新">18. 1.6.0 更新：Vitx® 视频（vitxvideo.html）</h2>
-    <p>新页面 <code>vitxvideo.html</code>，品牌名 <strong>Vitx®</strong>（副标题 Vitx Video），
-        地址 <code>https://xsmmc.caldson.us.ci/vitxvideo.html</code>。纯前端页面，不新增任何 Worker 接口。</p>
+    <h2 id="18. 1.6.0 更新">18. 1.6.0 更新：Vitx® 视频（vitxvideo.html + vitxvideopublish.html）</h2>
+    <p>新增两个页面，浏览与投稿分开：<code>vitxvideo.html</code>（视频站首页）与
+        <code>vitxvideopublish.html</code>（投稿页），品牌名 <strong>Vitx®</strong>（副标题 Vitx Video）。
+        纯前端页面，不新增任何 Worker 接口。</p>
     <ul>
     <li><strong>顶栏</strong>：Vitx® 标识；分区导航 首页 / 游戏 / 娱乐 / 音乐 / VLOG / 生活 / 饮食 / 学习；
         搜索框（标题、UP 主、视频 ID、标签）；点赞 / 收藏 / 历史 / 通知 图标、投稿按钮、版本徽标、返回账户。</li>
     <li><strong>新功能预告</strong>：「Vitual XRing 新功能预告」+ <code>1.5.0 → 1.6.0</code> 胶囊，竖排口号「你的一切都在这里」。</li>
+    <li><strong>投稿入口</strong>：顶栏「投稿」、快捷栏「⬆ 投稿」、面板页脚「想投稿？打开投稿页 →」都跳到投稿页。</li>
     <li><strong>多栏查找</strong>：今日最热（可按播放量换一批）、猜你想看、搜索结果三块；快捷按钮 点赞 / 投币 / 收藏 / 历史 / 投稿。</li>
-    <li><strong>投稿</strong>：上传、标题、简介、标签、原创（是 / 否）、分区，发布后提示「发布成功，请等待审核通过」，
-        视频以「审核中」置顶且不可播放。</li>
+    <li><strong>投稿（独立页面 <code>vitxvideopublish.html</code>）</strong>：上传、标题、简介、标签、原创（是 / 否）、分区，
+        外加<strong>创作声明</strong>多选 —— 含AI内容 / 包含营销内容 / 含虚构演绎 / 转载·二创 / 含赞助·广告 / 可能引起不适；
+        发布后提示「发布成功，请等待审核通过」，视频以「审核中」置顶，声明以橙色标签显示在卡片与播放页。</li>
     <li><strong>播放器</strong>：模态播放，按视频时长推进，支持播放 / 暂停（空格）、拖动进度、Esc 关闭；
         点赞 / 投币 / 收藏在播放器里切换。</li>
     <li><strong>通知</strong>：「追的视频 / 合集更新」「点赞、评论 / 你的视频 / 合集」两条开关，状态存本机。</li>
