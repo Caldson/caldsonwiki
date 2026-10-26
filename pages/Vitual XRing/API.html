@@ -1859,6 +1859,26 @@ curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/r
     <li><strong>部署</strong>：<code>cd worker &amp;&amp; npx wrangler deploy</code>；KV 结构是追加的，老数据不需要迁移；首次请求会顺手清理早期注入的 <code>v_demo*</code> 示例视频，站点从零开始（没有假数据）。</li>
     </ul>
     <p>版本号同步到 <code>1.7.0</code>（<code>CHAT_VERSION</code> 为 <code>1.7.0</code>）。</p>
+    <hr>
+    <h2 id="21. 1.7.1 更新">21. 1.7.1 更新：5 GB / 100 小时投稿与投币</h2>
+    <ul>
+    <li><strong>上限放开</strong>：视频文件上限从 20 MB 提到 <strong>5 GB</strong>，时长上限 <strong>100 小时</strong>（360000 秒）；
+        超大文件不再走 KV，而是存进 R2（绑定 <code>VIDEO_BUCKET</code>），按 8 MB 分片（R2 multipart）上传，
+        5 GB 约 640 片。没绑定 R2 时退回 KV 整包上传（受 KV 单值约 25 MB 限制，接口会明确提示）。</li>
+    <li><strong>分片接口</strong>：<code>POST /api/videos/:id/upload/start</code>、<code>PUT /api/videos/:id/upload/:part</code>、
+        <code>POST /api/videos/:id/upload/complete</code>、<code>POST /api/videos/:id/upload/abort</code>；
+        合并后状态从 <code>draft</code> 变 <code>pending</code>。播放仍然走 <code>/file</code>，R2 与 KV 都支持 <code>Range</code>。</li>
+    <li><strong>投币上线</strong>：<code>POST /api/videos/:id/coin</code>。1 个币 = <strong>5.00 VTX</strong>：
+        观众扣 5.00，投稿人加 5.00，双方各记一笔流水。<strong>取消投币不退钱、也不从投稿人账上扣回</strong>，
+        所以反复投币会重复扣款。余额不足返回 <code>insufficient_funds</code>，未审核的视频不能投币。</li>
+    <li><strong>投稿页</strong>：提示改成「任何格式，≤5 GB，时长 ≤100 小时」；选完文件会读取真实时长，超过 100 小时直接拦下；
+        上传时按钮显示百分比并有进度条。</li>
+    <li><strong>观看页</strong>：投币按钮改成服务端状态（计数就是真实投币数），未登录 / 余额不足 / 审核中都有提示，
+        「我投过币的」列表改用服务端 <code>coined</code> 生成。</li>
+    <li><strong>部署</strong>：<code>npx wrangler r2 bucket create vtx-video</code>，在 <code>wrangler.toml</code> 里取消注释
+        <code>[[r2_buckets]]</code>（binding 必须叫 <code>VIDEO_BUCKET</code>），然后 <code>npx wrangler deploy</code>。</li>
+    </ul>
+    <p>版本号同步到 <code>1.7.1</code>（<code>CHAT_VERSION</code> 为 <code>1.7.1</code>）。</p>
     <script src="../../dsh-ui.js"></script>
 </body>
 </html>
