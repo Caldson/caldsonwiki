@@ -1819,7 +1819,7 @@ curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/r
     <li><strong>播放器</strong>：模态播放，按视频时长推进，支持播放 / 暂停（空格）、拖动进度、Esc 关闭；
         点赞 / 投币 / 收藏在播放器里切换。</li>
     <li><strong>通知</strong>：「追的视频 / 合集更新」「点赞、评论 / 你的视频 / 合集」两条开关，状态存本机。</li>
-    <li><strong>限制</strong>：示例条目没有真实视频源；投稿在 1.6.x 只写入 <code>localStorage</code>（1.7.0 起改为服务端，见下一节）；投币不扣 VTX；停服守卫对本页同样生效。</li>
+    <li><strong>限制</strong>：示例条目在 1.7.0 已全部删除；投稿在 1.6.x 只写入 <code>localStorage</code>（1.7.0 起改为服务端，见下一节）；投币不扣 VTX；停服守卫对本页同样生效。</li>
     </ul>
     <p>版本号同步到 <code>1.6.0</code>（<code>CHAT_VERSION</code> 为 <code>1.6</code>），<code>manager.html</code> 顶栏新增「视频」入口。</p>
     <hr>
@@ -1847,14 +1847,16 @@ curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/r
     <li><strong>状态流转</strong>：<code>draft</code>（刚建记录）→ <code>pending</code>（文件上传成功）→ <code>published</code>（站主通过）。
         审核中只有作者与站主能看到；站主可以在首页「待审核」区直接「通过 / 删除」。</li>
     <li><strong>播放</strong>：<code>&lt;video src="/api/videos/:id/file?token=...">&lt;/video&gt;</code>，服务端支持 <code>Range</code>（返回 206，可拖进度、可断点续播）；
-        示例条目服务端没有文件，会提示「示例条目」。</li>
+        1.7.0 起不再内置示例视频，列表一开始是空的；早期注入的 <code>v_demo*</code> 会被自动清理并隐藏。</li>
     <li><strong>点赞 / 评论进服务端</strong>：点赞是账号级切换（<code>POST /api/videos/:id/like</code>）；
         评论 1~300 字、可点赞、只能删自己的（站主可删任意）；播放量由 <code>POST /view</code> 真实累加。</li>
     <li><strong>投稿页</strong>：未登录时顶部提示「投稿需要先登录」并禁用发布按钮；上传走两段式（先建记录再传文件），
         文件上限按服务端真实的 <strong>20 MB</strong>（KV 单值限制），超限前后端都会拒绝。</li>
+    <li><strong>没有假数据</strong>：12 条内置示例视频（<code>v_demo0001…v_demo0012</code>）与演示评论全部删除，部署后列表一开始为空；
+        早期写进 KV 的 <code>v_demo*</code> 会在第一次请求时连同文件、评论一起清掉，并且不会再出现在列表或详情里。</li>
     <li><strong>清理</strong>：不再需要 <code>vtx-video-store.js</code>（IndexedDB 帮助脚本已删除）；本机只保留投币 / 收藏 / 历史 / 通知开关。</li>
     <li><strong>SDK</strong>：<code>VTXApi.video</code> 提供 <code>status / list / get / upload / fileUrl / view / like / approve / reject / remove / comment / likeComment / removeComment</code>。</li>
-    <li><strong>部署</strong>：<code>cd worker &amp;&amp; npx wrangler deploy</code>；KV 结构是追加的，老数据不需要迁移，首次打开视频页会自动注入 12 条示例视频。</li>
+    <li><strong>部署</strong>：<code>cd worker &amp;&amp; npx wrangler deploy</code>；KV 结构是追加的，老数据不需要迁移；首次请求会顺手清理早期注入的 <code>v_demo*</code> 示例视频，站点从零开始（没有假数据）。</li>
     </ul>
     <p>版本号同步到 <code>1.7.0</code>（<code>CHAT_VERSION</code> 为 <code>1.7.0</code>）。</p>
     <script src="../../dsh-ui.js"></script>
