@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>2.0.1</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消聊天室全部限流，见第 16 节</strong>；<strong>1.5.0 新增聊天室 mention（@ 提及），见第 17 节</strong>；<strong>1.6.0 新增视频站 Vitx® 视频（vitxvideo.html），见第 18 节</strong>；<strong>1.6.1 视频改成独立观看页 <code>vitxvideo.html?videoid=xxx</code>（含评论区），投稿支持任何格式，见第 19 节</strong>；<strong>1.7.0 把投稿视频改成服务端存储（Workers KV），见第 20 节</strong>；<strong>1.7.1 放宽到 5 GB / 100 小时（R2 分片上传）并上线投币，见第 21 节</strong>；<strong>1.7.2 没开通 R2 时把文件改存 GitHub Release（2 GB / 100 小时），见第 22 节</strong>；<strong>1.9.0 新增聊天室 UNO（人机 / 普通房间 / 混合对战 / 随机匹配、组队互看手牌、批量出牌、生效玩家、局内聊天、反转奇偶），见第 29 节</strong>；<strong>1.10.0 支持 UNO 一回合多次抽牌与 +4 / +6 选择（转色不在手里自动 +6），见第 30 节</strong>；<strong>1.10.1 让同点数批量出牌可以带上压不住的抽牌并参与最终颜色选择，见第 31 节</strong>；<strong>1.10.2 修复红 8/黄 4 转绿 8/绿 4、生效玩家改为单选、+4/+6 改由被选中的玩家选择，见第 32 节</strong>；<strong>1.10.3 修复 +4/+6 选择框不显示与「可搭配」牌被误标为不可出，并加入页面版本检查，见第 33 节</strong>；<strong>2.0.0 修复 UNO 牌桌遮挡聊天室灰色提示，见第 34 节</strong>；<strong>2.0.1 规定多色同点数批次只能按最后一张牌转色，见第 35 节</strong>）</li>
+    <li>API 版本：<code>2.1.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消聊天室全部限流，见第 16 节</strong>；<strong>1.5.0 新增聊天室 mention（@ 提及），见第 17 节</strong>；<strong>1.6.0 新增视频站 Vitx® 视频（vitxvideo.html），见第 18 节</strong>；<strong>1.6.1 视频改成独立观看页 <code>vitxvideo.html?videoid=xxx</code>（含评论区），投稿支持任何格式，见第 19 节</strong>；<strong>1.7.0 把投稿视频改成服务端存储（Workers KV），见第 20 节</strong>；<strong>1.7.1 放宽到 5 GB / 100 小时（R2 分片上传）并上线投币，见第 21 节</strong>；<strong>1.7.2 没开通 R2 时把文件改存 GitHub Release（2 GB / 100 小时），见第 22 节</strong>；<strong>1.9.0 新增聊天室 UNO（人机 / 普通房间 / 混合对战 / 随机匹配、组队互看手牌、批量出牌、生效玩家、局内聊天、反转奇偶），见第 29 节</strong>；<strong>1.10.0 支持 UNO 一回合多次抽牌与 +4 / +6 选择（转色不在手里自动 +6），见第 30 节</strong>；<strong>1.10.1 让同点数批量出牌可以带上压不住的抽牌并参与最终颜色选择，见第 31 节</strong>；<strong>1.10.2 修复红 8/黄 4 转绿 8/绿 4、生效玩家改为单选、+4/+6 改由被选中的玩家选择，见第 32 节</strong>；<strong>1.10.3 修复 +4/+6 选择框不显示与「可搭配」牌被误标为不可出，并加入页面版本检查，见第 33 节</strong>；<strong>2.0.0 修复 UNO 牌桌遮挡聊天室灰色提示，见第 34 节</strong>；<strong>2.0.1 规定多色同点数批次只能按最后一张牌转色，见第 35 节</strong>；<strong>2.1.0 新增礼品兑换码（站主创建 VTX / 实物礼品），见第 36 节</strong>）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -2202,6 +2202,51 @@ Content-Type: application/json
     <li>新增服务端测试：红 6 + 黄 6 最后黄 6 时选红 → <code>bad_color</code>，选黄成功；先黄后红可以转红；出完后没有黄牌仍只能黄。</li>
     <li>更新批量出牌、红 1 / 黄 1、红 8 / 绿 8 UI 测试，断言按点选顺序发送且最终颜色为最后一张。</li>
     <li>版本号全套同步到 <code>2.0.1</code>；运行：<code>cd worker &amp;&amp; node test/uno.test.mjs</code>。</li>
+    </ul>    <hr>
+    <h2 id="36. 2.1.0 新增礼品兑换码">36. 2.1.0 新增礼品兑换码</h2>
+    <h3 id="36.1 功能">36.1 功能</h3>
+    <ul>
+    <li>站主在 <code>accounts-admin.html</code> 的「礼品兑换码」面板创建礼品。</li>
+    <li>礼品类型：<code>vtx</code> 兑换后 VTX 立即到账并写入「礼品兑换」交易；<code>item</code> 为实物 / 其它礼品，兑换后记录兑换人，凭记录到 XRingCR 相关门店领取。</li>
+    <li>礼品字段：名称、类型、VTX 金额、兑换说明、有效期（可选）、生成数量（1~20）、兑换码（可选，留空自动生成）。</li>
+    <li>兑换码格式：4 组 5 位大写字母 / 数字，例如 <code>ABCDE-12345-ABCDE-67890</code>；服务端去掉空格 / 连字符并转大写，大小写和连字符不敏感。</li>
+    <li>自动生成的码使用 CSPRNG，字符集去掉容易混淆的 <code>I</code> / <code>O</code> / <code>0</code> / <code>1</code>。</li>
+    <li>每个码只能使用一次；已使用、已停用、已过期都会被拒绝；兑换尝试每 IP 每分钟最多 10 次。</li>
+    <li>兑换码记录保存在 Workers KV 的 <code>gift:codes</code>；兑换通过 <code>commitAccounts</code>（AccountsLock）与余额写入串行，避免并发下同一码被多次领取。</li>
+    </ul>
+    <h3 id="36.2 API">36.2 API</h3>
+    <p><strong>站主创建：</strong><code>POST /api/admin/gifts</code></p>
+    <pre><code>{
+  "name": "10 VTX 礼品",
+  "type": "vtx",
+  "amount": "10.00",
+  "description": "XRingCR 门店礼品",
+  "count": 2,
+  "expiresAt": "2026-12-31T23:59:59.000Z",
+  "code": "ABCDE-12345-ABCDE-67890"
+}</code></pre>
+    <ul>
+    <li><code>type</code>：<code>vtx</code> / <code>item</code>；<code>vtx</code> 必须填写大于 0 的 <code>amount</code>。</li>
+    <li><code>count</code> 默认 1，最多 20；指定 <code>code</code> 时只能生成 1 个；<code>expiresAt</code> 必须是未来时间。</li>
+    <li>返回 <code>201</code>，包含 <code>codes</code> 数组（兑换码、礼品、状态、时间、使用人）。</li>
+    </ul>
+    <p><strong>站主列表：</strong><code>GET /api/admin/gifts</code> → <code>{ ok, count, codes }</code>，最多返回最新 500 条。</p>
+    <p><strong>站主启用 / 停用：</strong><code>PUT /api/admin/gifts/{code}</code>，body <code>{ "status": "active" }</code> 或 <code>{ "status": "disabled" }</code>；已使用的码不能修改。</p>
+    <p><strong>站主删除：</strong><code>DELETE /api/admin/gifts/{code}</code>，只能删除未使用的码。</p>
+    <p><strong>用户兑换：</strong><code>POST /api/me/redeem</code>，body <code>{ "code": "ABCDE-12345-ABCDE-67890" }</code></p>
+    <ul>
+    <li>成功返回 <code>{ ok, code, gift, message, trade, account }</code>；VTX 礼品余额立即到账，实物礼品返回门店领取提示。</li>
+    <li>错误：<code>400 bad_code</code>、<code>404 not_found</code>、<code>400 gift_used</code>、<code>400 gift_disabled</code>、<code>400 gift_expired</code>、<code>429 too_many_requests</code>。</li>
+    </ul>
+    <h3 id="36.3 前端">36.3 前端</h3>
+    <ul>
+    <li><code>shop.html</code> 顶部新增「礼品兑换」卡片：输入框 placeholder <code>ABCDE-12345-ABCDE-67890</code>，下方提示 <strong>请在XRingCR相关门店获取礼品兑换码，请勿轻易购买非官方的礼品兑换码，可能造成财产损失！</strong></li>
+    <li><code>accounts-admin.html</code> 新增「礼品兑换码」面板：创建 VTX / 实物礼品、批量生成、有效期、手动码；列表支持复制、停用 / 启用、删除未使用码，已使用码显示使用人和时间。</li>
+    </ul>
+    <h3 id="36.4 测试与版本">36.4 测试与版本</h3>
+    <ul>
+    <li><code>worker/test/gift.test.mjs</code>：站主权限、创建 / 列表、VTX 兑换到账、单次使用、停用 / 启用、过期、删除、普通用户 403、UI 静态检查。</li>
+    <li>版本号全套同步到 <code>2.1.0</code>。</li>
     </ul>    <script src="../../dsh-ui.js"></script>
 </body>
 </html>
