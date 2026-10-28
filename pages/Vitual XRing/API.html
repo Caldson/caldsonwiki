@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>1.7.2</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消聊天室全部限流，见第 16 节</strong>；<strong>1.5.0 新增聊天室 mention（@ 提及），见第 17 节</strong>；<strong>1.6.0 新增视频站 Vitx® 视频（vitxvideo.html），见第 18 节</strong>；<strong>1.6.1 视频改成独立观看页 <code>vitxvideo.html?videoid=xxx</code>（含评论区），投稿支持任何格式，见第 19 节</strong>；<strong>1.7.0 把投稿视频改成服务端存储（Workers KV），见第 20 节</strong>；<strong>1.7.1 放宽到 5 GB / 100 小时（R2 分片上传）并上线投币，见第 21 节</strong>；<strong>1.7.2 没开通 R2 时把文件改存 GitHub Release（2 GB / 100 小时），见第 22 节</strong>）</li>
+    <li>API 版本：<code>1.9.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消聊天室全部限流，见第 16 节</strong>；<strong>1.5.0 新增聊天室 mention（@ 提及），见第 17 节</strong>；<strong>1.6.0 新增视频站 Vitx® 视频（vitxvideo.html），见第 18 节</strong>；<strong>1.6.1 视频改成独立观看页 <code>vitxvideo.html?videoid=xxx</code>（含评论区），投稿支持任何格式，见第 19 节</strong>；<strong>1.7.0 把投稿视频改成服务端存储（Workers KV），见第 20 节</strong>；<strong>1.7.1 放宽到 5 GB / 100 小时（R2 分片上传）并上线投币，见第 21 节</strong>；<strong>1.7.2 没开通 R2 时把文件改存 GitHub Release（2 GB / 100 小时），见第 22 节</strong>；<strong>1.9.0 新增聊天室 UNO（人机 / 普通房间 / 混合对战 / 随机匹配、组队互看手牌、批量出牌、生效玩家、局内聊天、反转奇偶），见第 29 节</strong>）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -1904,6 +1904,126 @@ curl -X POST "https://xsmmc.caldson.us.ci/api/chat/messages/消息id/redpacket/r
         约等于每小时 150 部 1 GB 视频的完整播放量，够个人站点用；仓库 Releases 里会多出草稿 release（只有管理员可见）。</li>
     </ul>
     <p>版本号同步到 <code>1.7.2</code>（<code>CHAT_VERSION</code> 为 <code>1.7.2</code>）。</p>
+    <hr>
+    <h2 id="29. 1.9.0 更新：聊天室 UNO">29. 1.9.0 更新：聊天室 UNO</h2>
+    <p>1.9.0 在聊天室右上角新增 <strong>UNO</strong> 入口，可以在群聊 / 单聊里发送邀请卡片，支持人机对战、普通房间、混合对战和随机匹配，以及组队互看手牌、批量出牌、+2 / +4 / 禁止的生效玩家、连续生效、局内聊天和反转牌奇偶结算。</p>
+    <h3 id="29.1 入口与邀请">29.1 入口与邀请</h3>
+    <ul>
+    <li><code>chatroom.html</code> 顶栏右上角新增「UNO」按钮；会话输入框旁新增「UNO」按钮，可以直接把邀请卡片发到当前单聊 / 群聊。</li>
+    <li>邀请卡片是消息类型 <code>uno</code>，内容由服务端生成，包含房间名、模式、人数、状态和 <code>roomId</code>；点击卡片会打开 / 加入房间。</li>
+    <li>邀请卡片同样支持撤回、转发、会话预览（预览文案为 <code>[UNO 邀请] ……</code>）。</li>
+    <li>房间码为 6 位大写字母数字，可在房间内复制发给好友。</li>
+    </ul>
+    <h3 id="29.2 模式">29.2 模式</h3>
+    <table>
+    <thead><tr><th>mode</th><th>说明</th><th>人数</th></tr></thead>
+    <tbody>
+    <tr><td><code>ai</code></td><td>1 人 vs 1~9 个人机，创建后立刻发牌</td><td>2~10</td></tr>
+    <tr><td><code>normal</code></td><td>普通房间：邀请好友，或等待随机匹配</td><td>2~10</td></tr>
+    <tr><td><code>mixed</code></td><td>混合对战：真人一队、人机一队，至少 2 名真人才能开始</td><td>2~9 真人 + 1~9 人机（最多 18）</td></tr>
+    <tr><td><code>match</code></td><td>随机匹配：随机加入一间有空位的等待中普通房间；没有则创建一间</td><td>同 <code>normal</code></td></tr>
+    </tbody>
+    </table>
+    <h3 id="29.3 牌局规则与扩展">29.3 牌局规则与扩展</h3>
+    <ul>
+    <li>标准 108 张 UNO 牌：红 / 黄 / 绿 / 蓝各 25 张（0 一张、1~9 各两张、禁止 / 反转 / +2 各两张），万能牌与万能 +4 各 4 张；每人 7 张，翻开的起手牌固定为数字牌。</li>
+    <li>出牌：颜色相同 <strong>或</strong> 数字 / 功能相同；万能牌随时可出，并指定生效颜色。</li>
+    <li><strong>批量出牌</strong>：一次可选多张相同数字 / 功能的牌（颜色可以不同）。例：红 1 + 蓝 1 + 黄 1，出牌时在出现的颜色里选择最终生效颜色；红 1 + 蓝 1 + 蓝 1 只能选红或蓝；两张红 1 也可以一起出。</li>
+    <li><strong>组队</strong>：普通房间房主可打开组队并手动分队（也可自动分两队）；队友之间能看到彼此的手牌，队内聊天只有队友能看；队友出完牌整队获胜。混合对战固定为「真人 vs 人机」。</li>
+    <li><strong>生效玩家</strong>：出 +2 / +4 / 禁止后，如果房主没有关闭「设置生效玩家」，可以把效果指定给接下来 1~2 名玩家或自己的队友（可多选）；关闭后自动只作用于下家。</li>
+    <li><strong>连续生效</strong>：一次出 N 张 +2 / +4，目标要摸 2N / 4N 张，并跳过下一次出牌；一次出 N 张禁止，目标连续 N 个自己的回合不能出牌。</li>
+    <li><strong>反转牌奇偶</strong>：一次出多张反转牌时，按张数对 2 取余结算——3 张只反转一次，4 张互相抵消；两人局的反转牌相当于让对手少出一次。</li>
+    <li><strong>局内聊天</strong>：支持「全局」和「队内」两个频道；队内消息只有同队玩家能收到，服务端按队伍过滤。</li>
+    <li>牌堆用完时自动把弃牌堆（保留牌堆顶）洗回牌堆；每回合最多抽 1 张，抽到能出的牌可以继续出牌或过牌，抽到不能出的牌自动结束回合。</li>
+    <li>牌局中主动离开视为认输，对手 / 对方队伍获胜。</li>
+    <li>房间 KV 保留 24 小时，结束后的房间保留 2 小时；索引最多保留 200 间。</li>
+    </ul>
+    <h3 id="29.4 数据模型与 KV">29.4 数据模型与 KV</h3>
+    <ul>
+    <li><code>uno:room:{roomId}</code>：完整房间（玩家、手牌、牌堆、弃牌堆、方向、生效颜色、累计跳过、操作记录、局内聊天、设置）。</li>
+    <li><code>uno:index</code>：等待中 / 进行中房间摘要，用于随机匹配和「我的房间」（最多 200 条，自动清理过期条目）。</li>
+    <li>手牌只下发给本人和组队模式下的队友；对手只返回数量。</li>
+    <li>公开视图字段：<code>id</code>、<code>code</code>、<code>mode</code>、<code>status</code>（<code>waiting</code> / <code>playing</code> / <code>finished</code>）、<code>name</code>、<code>hostName</code>、<code>settings</code>、<code>players</code>、<code>me</code>、<code>game</code>、<code>chats</code>。</li>
+    </ul>
+    <p>牌面对象：</p>
+    <pre><code class="language-json">{ &quot;id&quot;: &quot;red:5:1&quot;, &quot;color&quot;: &quot;red&quot;, &quot;value&quot;: &quot;5&quot; }
+</code></pre>
+    <p><code>value</code> 可以是 <code>0</code>~<code>9</code>、<code>skip</code>、<code>reverse</code>、<code>draw2</code>、<code>wild</code>、<code>wild4</code>。</p>
+    <h3 id="29.5 接口">29.5 接口</h3>
+    <table>
+    <thead><tr><th>方法</th><th>路径</th><th>权限</th><th>作用</th></tr></thead>
+    <tbody>
+    <tr><td><code>GET</code></td><td><code>/api/uno/status</code></td><td>公开</td><td>版本、开关、模式、人数上限与能力列表</td></tr>
+    <tr><td><code>GET</code></td><td><code>/api/uno/rooms</code></td><td>登录</td><td>等待中的普通房间 + 我的房间</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms</code></td><td>登录</td><td>创建房间</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms/join</code></td><td>登录</td><td>按 <code>roomId</code> 或 <code>code</code> 加入</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/match</code></td><td>登录</td><td>随机匹配（没有空房时自动创建）</td></tr>
+    <tr><td><code>GET</code></td><td><code>/api/uno/rooms/{roomId}</code></td><td>房间成员</td><td>读取牌局视图</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms/{roomId}/start</code></td><td>房主</td><td>开始牌局</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms/{roomId}/settings</code></td><td>房主</td><td>修改组队 / 生效玩家设置 / 房间名（仅等待中）</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms/{roomId}/teams</code></td><td>房主</td><td>设置队伍：<code>{ &quot;teams&quot;: [[&quot;Alice&quot;,&quot;Bob&quot;],[&quot;Carol&quot;]] }</code> 或 <code>{ &quot;auto&quot;: true }</code></td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms/{roomId}/leave</code></td><td>房间成员</td><td>离开；牌局中离开视为认输</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms/{roomId}/play</code></td><td>当前回合玩家</td><td>出牌</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms/{roomId}/draw</code></td><td>当前回合玩家</td><td>抽 1 张</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms/{roomId}/pass</code></td><td>当前回合玩家</td><td>抽牌后过牌</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/uno/rooms/{roomId}/chat</code></td><td>房间成员</td><td>局内聊天</td></tr>
+    <tr><td><code>POST</code></td><td><code>/api/chat/conversations/{conversationId}/uno</code></td><td>会话成员</td><td>在单聊 / 群聊发送 UNO 邀请卡片</td></tr>
+    </tbody>
+    </table>
+    <p>创建房间：</p>
+    <pre><code class="language-http">POST /api/uno/rooms
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ &quot;mode&quot;: &quot;normal&quot;, &quot;teamMode&quot;: true, &quot;effectTargeting&quot;: true }
+</code></pre>
+    <p><code>mode</code> 为 <code>ai</code> 或 <code>mixed</code> 时 <code>bots</code> 必填（1~9）；<code>normal</code> 可省略。</p>
+    <p>出牌（批量出牌 + 最终颜色 + 生效玩家）：</p>
+    <pre><code class="language-http">POST /api/uno/rooms/u_xxx/play
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  &quot;cards&quot;: [&quot;red:1:1&quot;, &quot;blue:1:1&quot;, &quot;yellow:1:1&quot;],
+  &quot;color&quot;: &quot;blue&quot;,
+  &quot;targets&quot;: [&quot;Bob&quot;]
+}
+</code></pre>
+    <ul>
+    <li>所有牌必须是同一 <code>value</code>，且每张都能压住当前牌堆顶，否则 <code>409 illegal_play</code> / <code>409 mixed_batch</code>。</li>
+    <li>彩色牌批量出牌时 <code>color</code> 必须是这批牌出现过的颜色，否则 <code>409 bad_color</code>；万能牌 / 万能 +4 必须传 <code>color</code>，否则 <code>409 need_color</code>。</li>
+    <li><code>targets</code> 只能包含接下来 1~2 名玩家或自己的队友，否则 <code>409 bad_target</code>；不传时默认下家。</li>
+    <li>返回 <code>{ &quot;ok&quot;: true, &quot;room&quot;: { ... } }</code>，服务端已经把机器人回合跑完。</li>
+    </ul>
+    <p>局内聊天：</p>
+    <pre><code class="language-http">POST /api/uno/rooms/u_xxx/chat
+Content-Type: application/json
+
+{ &quot;text&quot;: &quot;队友注意，我剩一张&quot;, &quot;scope&quot;: &quot;team&quot; }
+</code></pre>
+    <p><code>scope</code> 为 <code>global</code>（默认）或 <code>team</code>；队内消息需要房间开启组队且自己已经分队。</p>
+    <h3 id="29.6 WebSocket 事件">29.6 WebSocket 事件</h3>
+    <p>复用 ChatHub，只发给房间里的真人玩家：</p>
+    <pre><code class="language-json">{ &quot;type&quot;: &quot;uno:update&quot;, &quot;room&quot;: &quot;u_xxx&quot;, &quot;seq&quot;: 12 }
+{ &quot;type&quot;: &quot;uno:chat&quot;, &quot;room&quot;: &quot;u_xxx&quot;, &quot;seq&quot;: 13, &quot;scope&quot;: &quot;team&quot;, &quot;message&quot;: { &quot;login&quot;: &quot;Alice&quot;, &quot;name&quot;: &quot;爱丽丝&quot;, &quot;scope&quot;: &quot;team&quot;, &quot;text&quot;: &quot;…&quot;, &quot;at&quot;: 1760000000000 } }
+{ &quot;type&quot;: &quot;uno:started&quot;, &quot;room&quot;: &quot;u_xxx&quot;, &quot;seq&quot;: 4 }
+</code></pre>
+    <p>客户端收到 <code>uno:update</code> / <code>uno:started</code> 后重新拉取 <code>GET /api/uno/rooms/{roomId}</code>；收到 <code>uno:chat</code> 直接把消息追加到队内 / 全局聊天。</p>
+    <h3 id="29.7 前端">29.7 前端</h3>
+    <ul>
+    <li><code>vtx-uno.js</code>：大厅、等待房间、牌桌、选色 / 选生效玩家弹窗、局内聊天、轮询与 WebSocket 刷新。</li>
+    <li><code>vtx-uno.css</code>：UNO 面板、牌面、聊天邀请卡片和移动端布局。</li>
+    <li><code>chatroom.html</code>：右上角 UNO 按钮、输入框旁 UNO 邀请按钮、<code>type: &quot;uno&quot;</code> 消息卡片、<code>uno:*</code> 实时事件转发。</li>
+    <li>SDK：<code>VTXApi.uno</code> 提供 <code>status / rooms / create / join / match / room / leave / start / settings / teams / play / draw / pass / chat / invite</code>。</li>
+    </ul>
+    <h3 id="29.8 测试与版本">29.8 测试与版本</h3>
+    <ul>
+    <li><code>worker/test/uno.test.mjs</code>：牌堆、批量出牌与最终颜色、反转奇偶、禁止叠加、+2 倍数、生效玩家限制、组队手牌可见性、队内聊天过滤、抽牌 / 过牌、机器人回合、随机匹配、混合对战、邀请卡片、房主权限与认输。</li>
+    <li><code>worker/test/uno-ui.test.mjs</code>：大厅渲染、创建人机对战、选牌出牌、抽牌刷新与关闭面板。</li>
+    <li><code>worker/test/chatroom.test.mjs</code>：邀请卡片、会话预览、UNO 按钮与脚本版本。</li>
+    <li>版本号全套同步到 <code>1.9.0</code>：<code>worker/index.js</code> 的 <code>VERSION</code> / <code>CHAT_VERSION</code> / <code>VIDEO_VERSION</code>、<code>worker/uno.js</code> 的 <code>UNO_VERSION</code>、<code>vtx-api.js</code> 的 <code>API_VERSION</code>、<code>vtx-markdown.js</code>、<code>chatroom.html</code> 的 <code>REQUIRED_API_VERSION</code>、各页 <code>&lt;script src=&quot;...?v=1.9.0&quot;&gt;</code>。</li>
+    <li>运行：<code>cd worker &amp;&amp; node test/uno.test.mjs</code>。</li>
+    </ul>
     <script src="../../dsh-ui.js"></script>
 </body>
 </html>
