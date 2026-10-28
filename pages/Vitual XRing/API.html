@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>1.10.3</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消聊天室全部限流，见第 16 节</strong>；<strong>1.5.0 新增聊天室 mention（@ 提及），见第 17 节</strong>；<strong>1.6.0 新增视频站 Vitx® 视频（vitxvideo.html），见第 18 节</strong>；<strong>1.6.1 视频改成独立观看页 <code>vitxvideo.html?videoid=xxx</code>（含评论区），投稿支持任何格式，见第 19 节</strong>；<strong>1.7.0 把投稿视频改成服务端存储（Workers KV），见第 20 节</strong>；<strong>1.7.1 放宽到 5 GB / 100 小时（R2 分片上传）并上线投币，见第 21 节</strong>；<strong>1.7.2 没开通 R2 时把文件改存 GitHub Release（2 GB / 100 小时），见第 22 节</strong>；<strong>1.9.0 新增聊天室 UNO（人机 / 普通房间 / 混合对战 / 随机匹配、组队互看手牌、批量出牌、生效玩家、局内聊天、反转奇偶），见第 29 节</strong>；<strong>1.10.0 支持 UNO 一回合多次抽牌与 +4 / +6 选择（转色不在手里自动 +6），见第 30 节</strong>；<strong>1.10.1 让同点数批量出牌可以带上压不住的抽牌并参与最终颜色选择，见第 31 节</strong>；<strong>1.10.2 修复红 8/黄 4 转绿 8/绿 4、生效玩家改为单选、+4/+6 改由被选中的玩家选择，见第 32 节</strong>；<strong>1.10.3 修复 +4/+6 选择框不显示与「可搭配」牌被误标为不可出，并加入页面版本检查，见第 33 节</strong>）</li>
+    <li>API 版本：<code>2.0.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消聊天室全部限流，见第 16 节</strong>；<strong>1.5.0 新增聊天室 mention（@ 提及），见第 17 节</strong>；<strong>1.6.0 新增视频站 Vitx® 视频（vitxvideo.html），见第 18 节</strong>；<strong>1.6.1 视频改成独立观看页 <code>vitxvideo.html?videoid=xxx</code>（含评论区），投稿支持任何格式，见第 19 节</strong>；<strong>1.7.0 把投稿视频改成服务端存储（Workers KV），见第 20 节</strong>；<strong>1.7.1 放宽到 5 GB / 100 小时（R2 分片上传）并上线投币，见第 21 节</strong>；<strong>1.7.2 没开通 R2 时把文件改存 GitHub Release（2 GB / 100 小时），见第 22 节</strong>；<strong>1.9.0 新增聊天室 UNO（人机 / 普通房间 / 混合对战 / 随机匹配、组队互看手牌、批量出牌、生效玩家、局内聊天、反转奇偶），见第 29 节</strong>；<strong>1.10.0 支持 UNO 一回合多次抽牌与 +4 / +6 选择（转色不在手里自动 +6），见第 30 节</strong>；<strong>1.10.1 让同点数批量出牌可以带上压不住的抽牌并参与最终颜色选择，见第 31 节</strong>；<strong>1.10.2 修复红 8/黄 4 转绿 8/绿 4、生效玩家改为单选、+4/+6 改由被选中的玩家选择，见第 32 节</strong>；<strong>1.10.3 修复 +4/+6 选择框不显示与「可搭配」牌被误标为不可出，并加入页面版本检查，见第 33 节</strong>；<strong>2.0.0 修复 UNO 牌桌遮挡聊天室灰色提示，见第 34 节</strong>）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -2157,6 +2157,24 @@ Content-Type: application/json
     <li>UI 测试补充：<code>batchable</code> 金色描边样式、目标 +4/+6 自动弹窗、选择后弹窗关闭、单选生效玩家。</li>
     <li>版本号全套同步到 <code>1.10.3</code>：<code>worker/index.js</code> 的 <code>VERSION</code> / <code>CHAT_VERSION</code> / <code>VIDEO_VERSION</code>、<code>worker/uno.js</code> 的 <code>UNO_VERSION</code>、<code>vtx-api.js</code> 的 <code>API_VERSION</code>、<code>vtx-markdown.js</code>、<code>chatroom.html</code> 的 <code>REQUIRED_API_VERSION</code> / <code>PAGE_VERSION</code>、各页 <code>&lt;script src=&quot;...?v=1.10.3&quot;&gt;</code>。</li>
     <li>运行：<code>cd worker &amp;&amp; node test/uno.test.mjs</code>。</li>
+    </ul>    <hr>
+    <h2 id="34. 2.0.0：UNO 牌桌提示被遮挡修复">34. 2.0.0：UNO 牌桌提示被遮挡修复</h2>
+    <h3 id="34.1 问题">34.1 问题</h3>
+    <ul>
+    <li>聊天室的灰色提示（toast）<code>z-index</code> 是 <code>90</code>。</li>
+    <li>UNO 牌桌 overlay 的 <code>z-index</code> 是 <code>400</code>。</li>
+    <li>因此游玩 UNO 时，出牌提示、+4/+6 选择结果、自动升级提示等 toast 会被牌桌盖住，看起来像没有提示。</li>
+    </ul>
+    <h3 id="34.2 修复">34.2 修复</h3>
+    <ul>
+    <li>聊天室 <code>.toast</code> 的 <code>z-index</code> 改为 <code>450</code>，高于 UNO overlay 的 <code>400</code>。</li>
+    <li>提示会显示在 UNO 牌桌、牌桌内弹窗之上；其他页面层级不变。</li>
+    <li>不涉及 API / 游戏规则变化。</li>
+    </ul>
+    <h3 id="34.3 测试与版本">34.3 测试与版本</h3>
+    <ul>
+    <li><code>worker/test/chatroom.test.mjs</code> 解析 <code>chatroom.html</code> 与 <code>vtx-uno.css</code>，断言 toast 的 <code>z-index</code> 必须大于 UNO overlay。</li>
+    <li>版本号全套同步到 <code>2.0.0</code>：<code>worker/index.js</code> 的 <code>VERSION</code> / <code>CHAT_VERSION</code> / <code>VIDEO_VERSION</code>、<code>worker/uno.js</code> 的 <code>UNO_VERSION</code>、<code>vtx-api.js</code> 的 <code>API_VERSION</code>、<code>vtx-markdown.js</code>、<code>chatroom.html</code> 的 <code>REQUIRED_API_VERSION</code> / <code>PAGE_VERSION</code>、各页 <code>&lt;script src=&quot;...?v=2.0.0&quot;&gt;</code>。</li>
     </ul>    <script src="../../dsh-ui.js"></script>
 </body>
 </html>
