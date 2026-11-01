@@ -21,7 +21,7 @@
     <li>所有接口均返回 JSON，字符集 UTF-8</li>
     <li>实现：Cloudflare Worker（<a href="./worker/index.js">worker/index.js</a>）</li>
     <li>客户端 SDK：<a href="./vtx-sdk.js">vtx-sdk.js</a></li>
-    <li>API 版本：<code>3.2.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消聊天室全部限流，见第 16 节</strong>；<strong>1.5.0 新增聊天室 mention（@ 提及），见第 17 节</strong>；<strong>1.6.0 新增视频站 Vitx® 视频（vitxvideo.html），见第 18 节</strong>；<strong>1.6.1 视频改成独立观看页 <code>vitxvideo.html?videoid=xxx</code>（含评论区），投稿支持任何格式，见第 19 节</strong>；<strong>1.7.0 把投稿视频改成服务端存储（Workers KV），见第 20 节</strong>；<strong>1.7.1 放宽到 5 GB / 100 小时（R2 分片上传）并上线投币，见第 21 节</strong>；<strong>1.7.2 没开通 R2 时把文件改存 GitHub Release（2 GB / 100 小时），见第 22 节</strong>；<strong>1.9.0 新增聊天室 UNO（人机 / 普通房间 / 混合对战 / 随机匹配、组队互看手牌、批量出牌、生效玩家、局内聊天、反转奇偶），见第 29 节</strong>；<strong>1.10.0 支持 UNO 一回合多次抽牌与 +4 / +6 选择（转色不在手里自动 +6），见第 30 节</strong>；<strong>1.10.1 让同点数批量出牌可以带上压不住的抽牌并参与最终颜色选择，见第 31 节</strong>；<strong>1.10.2 修复红 8/黄 4 转绿 8/绿 4、生效玩家改为单选、+4/+6 改由被选中的玩家选择，见第 32 节</strong>；<strong>1.10.3 修复 +4/+6 选择框不显示与「可搭配」牌被误标为不可出，并加入页面版本检查，见第 33 节</strong>；<strong>2.0.0 修复 UNO 牌桌遮挡聊天室灰色提示，见第 34 节</strong>；<strong>2.0.1 规定多色同点数批次只能按最后一张牌转色，见第 35 节</strong>；<strong>2.1.0 新增礼品兑换码（站主创建 VTX / 实物礼品），见第 36 节</strong>；<strong>3.1.0 新增分享生态（Vimidi / VMusic / Viratch / AUDIV / ViStyle / VClang / Vitx 动态）与自动识别分享卡片，见第 37 节</strong>；<strong>3.2.0 支持分享 Vitx 视频与聊天记录，见第 38 节</strong>）</li>
+    <li>API 版本：<code>3.3.0</code>（接口与 5.2.0 一致；6.0 新增商店、管理员仓库修改器与聊天室页面，6.1 更新商店商品数据，6.2 新增商店分类，6.3 新增商品图片显示，见第 9.2 节；8.0 把账户数据迁入 Workers KV；9.0 上线完整聊天室（单聊、群聊、好友、群公告、撤回、转发、搜索、免打扰、20 分钟媒体与 WebSocket 实时推送）；9.1 新增解散群聊（解散后只读保留历史消息）；9.2 站主可以新增、改名、解散公共频道；9.3 修复前端脚本被缓存导致的 <code>is not a function</code>；1.0.0 新增账号 UID、群号与群二维码、4 / 8 位邀请码建群、拼手速红包，见第 13 节；<strong>1.2.0 是安全修复补丁，见第 14 节</strong>；<strong>1.3.0 修复聊天室在 iPad / iOS 上的 overflow 排版问题（<a href="https://github.com/Caldson/Vitual-XRing/issues/2">issue #2</a>），见第 15 节</strong>；<strong>1.4.0 恢复登录页自动登录、管理员可查看账户当前密码、取消聊天室全部限流，见第 16 节</strong>；<strong>1.5.0 新增聊天室 mention（@ 提及），见第 17 节</strong>；<strong>1.6.0 新增视频站 Vitx® 视频（vitxvideo.html），见第 18 节</strong>；<strong>1.6.1 视频改成独立观看页 <code>vitxvideo.html?videoid=xxx</code>（含评论区），投稿支持任何格式，见第 19 节</strong>；<strong>1.7.0 把投稿视频改成服务端存储（Workers KV），见第 20 节</strong>；<strong>1.7.1 放宽到 5 GB / 100 小时（R2 分片上传）并上线投币，见第 21 节</strong>；<strong>1.7.2 没开通 R2 时把文件改存 GitHub Release（2 GB / 100 小时），见第 22 节</strong>；<strong>1.9.0 新增聊天室 UNO（人机 / 普通房间 / 混合对战 / 随机匹配、组队互看手牌、批量出牌、生效玩家、局内聊天、反转奇偶），见第 29 节</strong>；<strong>1.10.0 支持 UNO 一回合多次抽牌与 +4 / +6 选择（转色不在手里自动 +6），见第 30 节</strong>；<strong>1.10.1 让同点数批量出牌可以带上压不住的抽牌并参与最终颜色选择，见第 31 节</strong>；<strong>1.10.2 修复红 8/黄 4 转绿 8/绿 4、生效玩家改为单选、+4/+6 改由被选中的玩家选择，见第 32 节</strong>；<strong>1.10.3 修复 +4/+6 选择框不显示与「可搭配」牌被误标为不可出，并加入页面版本检查，见第 33 节</strong>；<strong>2.0.0 修复 UNO 牌桌遮挡聊天室灰色提示，见第 34 节</strong>；<strong>2.0.1 规定多色同点数批次只能按最后一张牌转色，见第 35 节</strong>；<strong>2.1.0 新增礼品兑换码（站主创建 VTX / 实物礼品），见第 36 节</strong>；<strong>3.1.0 新增分享生态（Vimidi / VMusic / Viratch / AUDIV / ViStyle / VClang / Vitx 动态）与自动识别分享卡片，见第 37 节</strong>；<strong>3.2.0 支持分享 Vitx 视频与聊天记录，见第 38 节</strong>；<strong>3.3.0 登录位置独立到 loginplaces.html、群公告可关闭、聊天室新增周边的人（10km），见第 39 节</strong>）</li>
     <li>以下是我们认为最有帮助的部分：<ul>
         <li><a href="#4.%20%E6%8E%A5%E5%8F%A3%E5%88%97%E8%A1%A8">4. 接口列表</a></li>
         <li><a href="#5.%20%E9%94%99%E8%AF%AF%E5%93%8D%E5%BA%94%E6%A0%BC%E5%BC%8F">5. 错误响应格式</a></li>
@@ -2354,6 +2354,34 @@ Content-Type: application/json
     <li>新增 <code>chat-record.html</code>：只读消息列表、分享卡片、复制链接、作者删除。Vitx 视频卡片由 <code>xring-social.js</code> 渲染。</li>
     <li><code>worker/test/social.test.mjs</code> 新增视频卡片与聊天记录全流程；<code>social-ui.test.mjs</code> 增加页面 / 按钮 / SDK 检查。</li>
     <li>全套版本号同步到 <code>3.2.0</code>；运行 <code>cd worker &amp;&amp; node test/social.test.mjs</code>。</li>
+    </ul>    <hr>
+    <h2 id="39. 3.3.0 登录位置、群公告与周边的人">39. 3.3.0 登录位置独立、群公告可关闭、周边的人（10km）</h2>
+    <h3 id="39.1 登录位置独立页">39.1 登录位置独立页</h3>
+    <ul>
+    <li>登录位置从 <code>manager.html</code> 移到 <code>loginplaces.html</code>；账户页只保留入口，不再加载 Leaflet 地图。</li>
+    <li>新页面展示 <code>account.loginHistory</code> 与地图 / OpenStreetMap 兜底；API 不变，只调用 <code>GET /api/me</code>。</li>
+    <li>未登录自动跳转 <code>login.html?next=loginplaces.html</code>。</li>
+    </ul>
+    <h3 id="39.2 群公告可关闭">39.2 群公告可关闭</h3>
+    <ul>
+    <li>群公告右侧新增关闭按钮；关闭后当前会话隐藏公告条，顶部 📌 按钮可重新打开。</li>
+    <li>关闭状态存在会话 entry 的 <code>announcementHiddenText</code>；<code>conversation.announcementHidden</code> 表示当前公告是否被该用户关闭。</li>
+    <li>公告文本更新后自动重新显示；关闭只影响当前用户。</li>
+    <li>关闭：<code>POST /api/chat/conversations/{id}/settings</code> body <code>{ "announcementHiddenText": "当前公告文本" }</code>；重开传空字符串。</li>
+    </ul>
+    <h3 id="39.3 周边的人">39.3 周边的人（最大 10km）</h3>
+    <ul>
+    <li><code>POST /api/chat/nearby</code>（登录），body <code>{ "latitude": 30.1234, "longitude": 120.5678 }</code>。</li>
+    <li>服务端只保存约 100 米精度和当前时间，KV key <code>chat:location:&lt;login&gt;</code>，<code>expirationTtl = 1800</code>（30 分钟）；不保存原始 GPS。</li>
+    <li>扫描 <code>chat:location:*</code>，返回距离 ≤ 10 km 的账户，按距离排序，最多 100 个；排除自己、双方任意一方拉黑的账户、超过 30 分钟的记录。</li>
+    <li>返回 <code>{ radiusKm, count, updatedAt, items:[{login, uid, username, distanceKm, friend, at}] }</code>；不返回经纬度 / IP。</li>
+    <li>每 IP 每分钟最多 20 次；前端仅在用户主动点「附近」并允许定位时上报。</li>
+    <li>聊天室左侧新增「附近」按钮，支持权限拒绝 / 超时 / 不支持定位提示、重试和加好友。</li>
+    </ul>
+    <h3 id="39.4 测试与版本">39.4 测试与版本</h3>
+    <ul>
+    <li><code>worker/test/account-places.test.mjs</code>：登录位置拆分、群公告关闭 / 新公告重新显示、10km 内附近账户 / 排除自己 / 远距离 / 拉黑、聊天室入口与 SDK。</li>
+    <li>全套版本号同步到 <code>3.3.0</code>；运行 <code>cd worker &amp;&amp; node test/account-places.test.mjs</code>。</li>
     </ul>    <script src="../../dsh-ui.js"></script>
 </body>
 </html>
