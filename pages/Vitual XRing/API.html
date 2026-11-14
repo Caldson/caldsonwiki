@@ -2903,6 +2903,7 @@ const balance = await VTX.getBalance(); // { money, login }</code></pre>
     <li>在 <code>vtoy.json</code> 申请权限：<code>login</code> 允许 <code>VTX.login()</code> / <code>VTX.getUser()</code>；<code>wallet</code> 允许 <code>VTX.getBalance()</code>。</li>
     <li>父页面会弹出「申请登录您的账户」确认框；用户同意后才返回账户信息，<strong>不会把 token 交给应用</strong>。</li>
     <li>Vtoy iframe 已带 <code>allow-popups</code>，也可以直接 <code>window.open</code> 打开 API_LOGIN；此时会收到完整 token，通常不建议。</li>
+    <li><strong>402：</strong>用户点「取消」拒绝登录时，<code>VTX.login()</code> 的 Promise 会拒绝；错误对象带 <code>status = 402</code>、<code>code = "login_rejected"</code>。未申请权限时是 <code>403 permission_denied</code>。</li>
     </ul>
 
     <h3 id="85.4 在 VDEX 中使用">85.4 在 VDEX 中使用</h3>
@@ -2933,7 +2934,8 @@ function openPay() {
     <pre><code class="language-html">&lt;button onclick="window.open('https://xsmmc.caldson.us.ci/API_LOGIN.html', 'vtx-login', 'width=480,height=680')"&gt;
     登录 VTX
 &lt;/button&gt;</code></pre>
-    <p>注意：<code>target="_blank"</code> 在现代浏览器中通常等价于 <code>noopener</code>，API_LOGIN 找不到 <code>window.opener</code>，只能依赖 <code>redirect</code>。推荐用 <code>window.open(...)</code> 保留 opener，或显式传 redirect。</p>
+    <p><code>VDEX.login()</code> 返回 Promise，成功时解析为用户信息；用户关闭登录窗口或拒绝登录时，Promise 拒绝，错误对象带 <code>status = 402</code>、<code>code = "login_rejected"</code>。</p>
+<p>注意：<code>target="_blank"</code> 在现代浏览器中通常等价于 <code>noopener</code>，API_LOGIN 找不到 <code>window.opener</code>，只能依赖 <code>redirect</code>。推荐用 <code>window.open(...)</code> 保留 opener，或显式传 redirect。</p>
 
     <h3 id="85.5 检查清单">85.5 检查清单</h3>
     <ul>
@@ -3038,7 +3040,8 @@ await VTX.receive({ amount: "5.00", party: "活动奖励", description: "签到"
     </table>
     <pre><code class="language-js">const user = await VTX.login();
 const balance = await VTX.getBalance();</code></pre>
-    <p>Vtoy 中不要调用 <code>VTX.configure</code>、<code>VTX.login("用户名", "密码")</code>、<code>VTX.pay</code> 等完整 SDK 方法；这些属于独立网站 / 后端场景。</p>
+    <p>用户拒绝登录时，<code>VTX.login()</code> 的 Promise 拒绝，错误对象带 <code>status = 402</code>、<code>code = "login_rejected"</code>。其它错误按 <code>status</code> / <code>code</code> 区分。</p>
+<p>Vtoy 中不要调用 <code>VTX.configure</code>、<code>VTX.login("用户名", "密码")</code>、<code>VTX.pay</code> 等完整 SDK 方法；这些属于独立网站 / 后端场景。</p>
 
     <h3 id="86.7 错误格式">86.7 错误格式</h3>
     <pre><code class="language-js">try {
