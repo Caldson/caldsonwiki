@@ -3029,13 +3029,16 @@ await VTX.receive({ amount: "5.00", party: "活动奖励", description: "签到"
     </table>
 
     <h3 id="86.6 Vtoy 专用 VTX 桥接">86.6 Vtoy 专用 VTX 桥接</h3>
-    <p>Vtoy 应用运行在沙箱 iframe 中，父页面提供的 <code>VTX</code> 不是完整 SDK，只有以下三个函数：</p>
+    <p>Vtoy 应用运行在沙箱 iframe 中，父页面提供的 <code>VTX</code> 不是完整 SDK，只有以下函数：</p>
     <table>
     <thead><tr><th>函数</th><th>参数</th><th>返回 / 说明</th></tr></thead>
     <tbody>
     <tr><td><code>VTX.login()</code></td><td>无</td><td>弹出父页面确认框；同意后返回 <code>{ login, username, uid }</code>，不返回 token。需要 login 权限。</td></tr>
     <tr><td><code>VTX.getUser()</code></td><td>无</td><td>与 <code>VTX.login()</code> 相同的用户信息。</td></tr>
     <tr><td><code>VTX.getBalance()</code></td><td>无</td><td>返回 <code>{ money, login }</code>。需要 wallet 权限。</td></tr>
+    <tr><td><code>VTX.getData(game)</code></td><td>游戏名</td><td>读取当前账户的 Vtoy 游戏数据。</td></tr>
+    <tr><td><code>VTX.setData(game, values)</code></td><td>游戏名、对象</td><td>合并写入当前账户的 Vtoy 游戏数据。</td></tr>
+    <tr><td><code>VTX.receive(options)</code></td><td><code>{ amount, party, description?, name? }</code></td><td>给当前账户记一笔收款（红包提现）；需要 wallet 权限。</td></tr>
     </tbody>
     </table>
     <pre><code class="language-js">const user = await VTX.login();
