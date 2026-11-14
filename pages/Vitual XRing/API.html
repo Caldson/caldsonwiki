@@ -15,7 +15,7 @@
 <body>
     <h1>Vitual XRing API 文档</h1>
     <blockquote>本文是以<a href="https://xsmmc.caldson.us.ci/API-docs.md">API-docs.md</a>进行制作的。</blockquote>
-    <p><strong>12.1.1 新增：</strong><a href="#85. API_LOGIN 与 API_VTXPAY 使用指南">API_LOGIN.html / API_VTXPAY.html 使用指南</a></p>
+    <p><strong>12.1.1 新增：</strong><a href="#85. API_LOGIN 与 API_VTXPAY 使用指南">API_LOGIN / API_VTXPAY 使用指南</a> · <a href="#86. VTX JavaScript SDK 函数总表">VTX 函数总表</a></p>
     <p>账户服务 API，用于在其它站点登录 Vitual XRing 账户并同步全部账户信息。</p>
     <ul>
     <li>基础地址：<code>https://xsmmc.caldson.us.ci</code></li>
@@ -2945,6 +2945,109 @@ function openPay() {
     <li>Vtoy 使用 <code>VTX.login()</code> / <code>VTX.getBalance()</code> 并只申请需要的权限。</li>
     <li>VDEX 只有 pro / enterprise 使用 <code>VDEX.login()</code> / <code>VDEX.pay()</code>。</li>
     </ul>
+    <h2 id="86. VTX JavaScript SDK 函数总表">86. VTX JavaScript SDK 函数总表</h2>
+    <p><code>vtx-sdk.js</code> 暴露全局对象 <code>VTX</code>。除特别注明外，先加载并配置：</p>
+    <pre><code class="language-html">&lt;script src="https://xsmmc.caldson.us.ci/vtx-sdk.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+VTX.configure({ baseUrl: "https://xsmmc.caldson.us.ci" });
+&lt;/script&gt;</code></pre>
+
+    <h3 id="86.1 初始化与会话">86.1 初始化与会话</h3>
+    <table>
+    <thead><tr><th>函数</th><th>参数</th><th>返回 / 说明</th></tr></thead>
+    <tbody>
+    <tr><td><code>VTX.configure(options)</code></td><td><code>{ baseUrl }</code></td><td>设置 API 地址并写入 localStorage，返回地址字符串；未传 baseUrl 会抛错。</td></tr>
+    <tr><td><code>VTX.login(login, password)</code></td><td>登录名、密码</td><td>登录并自动保存 token，返回 <code>{ token, expiresAt, login, account }</code>。</td></tr>
+    <tr><td><code>VTX.register(options)</code></td><td><code>{ login, password, username? }</code></td><td>注册；成功自动登录，返回结构与 login 相同并带 <code>created: true</code>。</td></tr>
+    <tr><td><code>VTX.setToken(token)</code></td><td>token 字符串</td><td>采纳外部（如 API_LOGIN 弹窗）拿到的 token；空字符串等于退出。</td></tr>
+    <tr><td><code>VTX.logout()</code></td><td>无</td><td>清除 token。</td></tr>
+    <tr><td><code>VTX.isLoggedIn()</code></td><td>无</td><td>本地是否有 token。</td></tr>
+    <tr><td><code>VTX.getToken()</code></td><td>无</td><td>当前 token，没有则空字符串。</td></tr>
+    <tr><td><code>VTX.baseUrl</code></td><td>属性</td><td>当前 API 地址。</td></tr>
+    </tbody>
+    </table>
+
+    <h3 id="86.2 账户">86.2 账户</h3>
+    <table>
+    <thead><tr><th>函数</th><th>参数</th><th>返回 / 说明</th></tr></thead>
+    <tbody>
+    <tr><td><code>VTX.me()</code></td><td>无</td><td>当前登录账户信息。</td></tr>
+    <tr><td><code>VTX.accounts()</code></td><td>无</td><td>全部账户；管理员接口，普通账户 403。</td></tr>
+    <tr><td><code>VTX.account(loginName)</code></td><td>登录名</td><td>指定账户；管理员接口。</td></tr>
+    </tbody>
+    </table>
+
+    <h3 id="86.3 游戏数据">86.3 游戏数据</h3>
+    <table>
+    <thead><tr><th>函数</th><th>参数</th><th>返回 / 说明</th></tr></thead>
+    <tbody>
+    <tr><td><code>VTX.setData(game, values)</code></td><td>游戏名、对象</td><td>合并写入，不覆盖其它键。</td></tr>
+    <tr><td><code>VTX.getData(game)</code></td><td>游戏名</td><td>读取游戏数据。</td></tr>
+    <tr><td><code>VTX.deleteData(game, key?)</code></td><td>游戏名、可选键</td><td>不传 key 删整个命名空间；传 key 只删一个键。</td></tr>
+    </tbody>
+    </table>
+    <pre><code class="language-js">await VTX.setData("MyGame", { level: 3, coins: 120 });
+const data = await VTX.getData("MyGame");
+await VTX.deleteData("MyGame", "coins");</code></pre>
+
+    <h3 id="86.4 交易与收款">86.4 交易与收款</h3>
+    <table>
+    <thead><tr><th>函数</th><th>参数</th><th>返回 / 说明</th></tr></thead>
+    <tbody>
+    <tr><td><code>VTX.trade(options)</code></td><td><code>{ type: "payment"|"receipt", amount, party, description?, name?, password? }</code></td><td>通用记账；payment 扣余额且必须带密码，receipt 加余额不需要密码。</td></tr>
+    <tr><td><code>VTX.pay(options)</code></td><td><code>{ amount, party, description?, name?, password }</code></td><td>付款快捷方式。</td></tr>
+    <tr><td><code>VTX.receive(options)</code></td><td><code>{ amount, party, description?, name? }</code></td><td>收款快捷方式。</td></tr>
+    <tr><td><code>VTX.createReceiptCode(amount?)</code></td><td>可选金额</td><td>生成新收款码，旧码立即失效。</td></tr>
+    <tr><td><code>VTX.receiptCode()</code></td><td>无</td><td>读取当前收款码，不重新生成。</td></tr>
+    <tr><td><code>VTX.revokeReceiptCode()</code></td><td>无</td><td>撤销当前收款码。</td></tr>
+    <tr><td><code>VTX.receiptCodeInfo(code)</code></td><td>收款码</td><td>解析收款码；公开接口，不需要登录。</td></tr>
+    <tr><td><code>VTX.payReceiptCode(code, options)</code></td><td>收款码、<code>{ password, amount?, description? }</code></td><td>用收款码付款，需要密码。</td></tr>
+    </tbody>
+    </table>
+    <pre><code class="language-js">await VTX.pay({
+    amount: "10.00",
+    party: "我的网站",
+    description: "购买道具",
+    password: "账户密码"
+});
+
+await VTX.receive({ amount: "5.00", party: "活动奖励", description: "签到" });</code></pre>
+
+    <h3 id="86.5 社交">86.5 社交</h3>
+    <table>
+    <thead><tr><th>函数</th><th>参数</th><th>返回 / 说明</th></tr></thead>
+    <tbody>
+    <tr><td><code>VTX.social.resolve(url)</code></td><td>分享链接</td><td>解析链接对应的分享内容。</td></tr>
+    <tr><td><code>VTX.social.list(kind, options?)</code></td><td>类型、<code>{ q, owner, sort, before, limit }</code></td><td>列出某类分享内容。</td></tr>
+    <tr><td><code>VTX.social.get(kind, id)</code></td><td>类型、ID</td><td>读取单条分享内容。</td></tr>
+    <tr><td><code>VTX.social.share(payload)</code></td><td>分享对象</td><td>创建分享卡片，通常需要登录。</td></tr>
+    <tr><td><code>VTX.social.shareGet(id)</code></td><td>分享 ID</td><td>读取分享卡片。</td></tr>
+    <tr><td><code>VTX.social.meeting(no)</code></td><td>会议号</td><td>读取会议信息。</td></tr>
+    </tbody>
+    </table>
+
+    <h3 id="86.6 Vtoy 专用 VTX 桥接">86.6 Vtoy 专用 VTX 桥接</h3>
+    <p>Vtoy 应用运行在沙箱 iframe 中，父页面提供的 <code>VTX</code> 不是完整 SDK，只有以下三个函数：</p>
+    <table>
+    <thead><tr><th>函数</th><th>参数</th><th>返回 / 说明</th></tr></thead>
+    <tbody>
+    <tr><td><code>VTX.login()</code></td><td>无</td><td>弹出父页面确认框；同意后返回 <code>{ login, username, uid }</code>，不返回 token。需要 login 权限。</td></tr>
+    <tr><td><code>VTX.getUser()</code></td><td>无</td><td>与 <code>VTX.login()</code> 相同的用户信息。</td></tr>
+    <tr><td><code>VTX.getBalance()</code></td><td>无</td><td>返回 <code>{ money, login }</code>。需要 wallet 权限。</td></tr>
+    </tbody>
+    </table>
+    <pre><code class="language-js">const user = await VTX.login();
+const balance = await VTX.getBalance();</code></pre>
+    <p>Vtoy 中不要调用 <code>VTX.configure</code>、<code>VTX.login("用户名", "密码")</code>、<code>VTX.pay</code> 等完整 SDK 方法；这些属于独立网站 / 后端场景。</p>
+
+    <h3 id="86.7 错误格式">86.7 错误格式</h3>
+    <pre><code class="language-js">try {
+    await VTX.login("账户", "密码");
+} catch (error) {
+    console.log(error.status); // 401 / 403 / 400 ...
+    console.log(error.code);   // invalid_credentials / insufficient_funds ...
+    console.log(error.message);
+}</code></pre>
     <script src="../../dsh-ui.js"></script>
 </body>
 </html>
